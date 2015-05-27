@@ -73,6 +73,7 @@ namespace larlite {
     bool isZigZag(float const& a, float const& b, float const& c);
     std::vector<std::pair<short,short> > findZigZag(std::vector<short> const& adcs, float const& baseline);
     bool isNotZigZagRegion(unsigned int wf1, unsigned int wf2, short tick, size_t &idx1, size_t &idx2);
+    bool isZigZagRegion(unsigned int wf1, unsigned int wf2, short tick, size_t &idx1, size_t &idx2);
 
     // nimumum number of ticks to create ZigZag region
     size_t _minLength;
@@ -98,7 +99,7 @@ namespace larlite {
     float _mean_ref;
     float _mean_sub;
     float _mean_diff;
-    float _corr, _corr2,_corrall;
+    float _corr, _corr2,_corrall, _corrzig;
     std::vector<short> _diff_v;
     std::vector<short> _adc_v;
 

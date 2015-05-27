@@ -38,7 +38,7 @@ namespace larlite {
     _t_ch->Branch("evt",&_evtN,"evt/i");
     _t_ch->Branch("mean",&_mean,"mean/F");
     _t_ch->Branch("block",&_block,"block/i");
-    //_t_ch->Branch("adc_v","std::vector<short>",&_adc_v);
+    _t_ch->Branch("adc_v","std::vector<short>",&_adc_v);
     _t_ch->Branch("zigzag_start","std::vector<short>",&_zigzag_start);
     _t_ch->Branch("zigzag_end","std::vector<short>",&_zigzag_end);
     _t_ch->SetDirectory(0);
@@ -77,6 +77,7 @@ namespace larlite {
     _t_corr->Branch("mean_diff",&_mean_diff,"mean_diff/F");
     _t_corr->Branch("corr",&_corr,"corr/F");
     _t_corr->Branch("corrall",&_corrall,"corrall/F");
+    _t_corr->Branch("corrzig",&_corrzig,"corrzig/F");
     //_t_corr->Branch("corr2",&_corr2,"corr2/F");
     //_t_corr->Branch("diff_v","std::vector<short>",&_diff_v);
     _t_corr->SetDirectory(0);
@@ -120,7 +121,7 @@ namespace larlite {
       
       _adc_v.clear();
       
-      auto const& adcs = wf.fADC;
+      auto const& adcs = wf.ADCs();
 
       
       // Mean
@@ -181,9 +182,10 @@ namespace larlite {
       size_t ctr=0;
 
       // Loop over waveforms in list
-      for(auto const& ch1 : _ref_channel_s) {
-
-      	auto const& wf = (*wfs).at(chmap[ch1]);
+      //for(auto const& ch1 : _ref_channel_s) {
+      //auto const& wf = (*wfs).at(chmap[ch1]);
+      for (size_t chn = 0; chn < wfs->size(); chn++){
+	auto const& wf = (*wfs).at(chn);
 	auto const& ch = wf.Channel();      
 
 	auto const& adcs = wf.fADC;
@@ -223,9 +225,8 @@ namespace larlite {
       // For "reference" channels in list
       int counter_ch = 0;
       for(auto const& ch : _ref_channel_s) {
-      	auto const& wf_ref = (*wfs).at(chmap[ch]);
-	//for (size_t chn = 0; chn < wfs->size(); chn++){
-	//std::cout<<"Finished computing corr for "<< chn << std::endl;
+      auto const& wf_ref = (*wfs).at(chmap[ch]);
+      //for (size_t chn = 0; chn < wfs->size(); chn++){
 	//auto const& wf_ref = (*wfs).at(chn);
 	auto const& ch_ref = wf_ref.Channel();
 	_ref_larch = ch_ref;
@@ -238,9 +239,12 @@ namespace larlite {
 	_rms_ref  = _ch_rms_v.at(chmap[ch_ref]);
 	
 	fWatch.Start();
-	for(auto const& ch2 : _ref_channel_s) {
+	//for(auto const& ch2 : _ref_channel_s) {
+	//auto const& wf_sub = (*wfs).at(chmap[ch2]);
 
-	  auto const& wf_sub = (*wfs).at(chmap[ch2]);
+	for (size_t chn = 0; chn < wfs->size(); chn++){
+	  auto const& wf_sub = (*wfs).at(chn);
+
 	  auto const& ch_sub = wf_sub.Channel();
 	  _sub_larch = ch_sub;
 	  _sub_crate = _ch_to_crate.at(ch_sub);
@@ -264,10 +268,15 @@ namespace larlite {
 	  _rms_diff = sqrt( _rms_diff / ((float)_nsamples));
 	  
 	  _corr = 0;
+	  _corrall = 0;
+	  _corrzig = 0;
 	  int counter = 0;
+	  int zigsamples = 0;
 	  // markers keeping track of the position in the vector of zig-zags that we have reached
 	  size_t idx1 = 0;
 	  size_t idx2 = 0;
+	  size_t zig1 = 0;
+	  size_t zig2 = 0;
 	  for(size_t j=0; j<_nsamples; ++j){
 	    // need to make sure this tick is in neither waveform's zig-zag region
 	    //std::cout << "using: ch: [" << ch_ref << ", " << ch_sub << "]. Ticks: " 
@@ -277,14 +286,27 @@ namespace larlite {
 	      _corr += corrthistick;
 	      counter += 1;
 	    }
+	    if ( isZigZagRegion(ch_ref,ch_sub,j+l*_nsamples,zig1,zig2) ){
+	      _corrzig += corrthistick;
+	      zigsamples += 1;
+	    }	
 	    _corrall += corrthistick;
 	  }
 	  if (_verbose) {std::cout << "Chans: [" << ch_ref << ", " << ch_sub << "]. Tick fraction: " << float(counter)/_nsamples << std::endl; }
-	  if ( (_rms_sub != 0) and (_rms_ref != 0) )
-	    _corr /= (float)(_rms_sub*_rms_ref*counter);
+	  if ( (_rms_sub != 0) and (_rms_ref != 0) ){
+	    if (_verbose) { std::cout << "RMS ref: " << _rms_ref << "\tRMS sub: " << _rms_sub << "\t Ticks: " << _nsamples << std::endl; } 
+	    if (counter != 0)
+	      _corr /= (float)(_rms_sub*_rms_ref*counter);
+	    else
+	      _corr = -2;
 	    _corrall /= (float)(_rms_sub*_rms_ref*_nsamples);
-	    if (_verbose) {std::cout << "Corr: " << _corr << "\tCorr All: " << _corrall << std::endl << std::endl; }
-
+	    if (zigsamples != 0)
+	      _corrzig /= (float)(_rms_sub*_rms_ref*zigsamples);
+	    else
+	      _corrzig = -2;
+	  }
+	  if (_verbose) {std::cout << "Corr: " << _corr << "\tCorr All: " << _corrall << "\tCorr Zig: " << _corrzig << std::endl << std::endl; }
+	  
 	  //_tree_v.at(counter_ch)->Fill();
 	  _t_corr->Fill();
 	}// for all "sub" waveforms
@@ -317,10 +339,11 @@ namespace larlite {
   }
 
   bool ZigZag::isZigZag(float const& a, float const& b, float const& c){
-
     if ( (((a > 0) and (b < 0) and (c > 0)) or ((a < 0) and (b > 0) and (c < 0))) and
-	 ( ( (a-b) <= -3 ) or ( (a-b) >= 3) ) and ( ( (b-c) <= -3 ) or ( (b-c) >= 3) ) )
+	 ( fabs(a-b) > 3 ) and ( fabs(b-c) > 3 ) ){
       return true;
+    }
+    else
     return false;
   }
 
@@ -331,9 +354,9 @@ namespace larlite {
     size_t ticksOn = 0;
     std::vector<std::pair<short,short> > ROIs;
     std::pair<short,short> ROI;
-    for (size_t i=0; i < adcs.size()-2; i++){
+    for (size_t i=0; i < 8300; i++){//adcs.size()-2; i++){
       // if 3 consecutive ticks show zig-zag
-      if ( isZigZag(adcs[i]-baseline,adcs[i+1]-baseline,adcs[i+2]-baseline) ){
+      if ( isZigZag(float(adcs[i])-baseline,float(adcs[i+1])-baseline,float(adcs[i+2])-baseline) ){
 	// if not in ROI restart
 	if (ticksOn == 0)
 	  start = i;
@@ -343,9 +366,9 @@ namespace larlite {
       else{
 	// if we were in ROI -> close segment
 	if (ticksOn != 0){
-	  end = i+2;
 	  // if ROI long enough -> make pair
 	  if (ticksOn >= _minLength){
+	    end = i+1;
 	    ROI = std::make_pair(start,end);
 	    ROIs.push_back(ROI);
 	  }
@@ -396,6 +419,48 @@ namespace larlite {
     
     return false;
   }
+
+
+  bool ZigZag::isZigZagRegion(unsigned int wf1, unsigned int wf2, short tick, size_t &idx1, size_t &idx2){
+
+    // boolean to keep track if in zigzag od one wf
+    bool zz1 = false;
+    bool zz2 = false;
+
+    if (_zzMap[wf1].size() > idx1){
+      auto const& reg1 = _zzMap[wf1][idx1];
+      short start1 = reg1.first;
+      short end1   = reg1.second;
+      //if (_verbose) { std::cout << "Wf1: [" << start1 << ", " << end1 << "] " << tick << std::endl; }
+      if (end1 < tick)
+	idx1 += 1;
+      if ( (tick > start1) and (tick < end1) )
+	zz1 = true;
+    }
+    /*
+    else
+      if (_verbose) { std::cout << "Out of bounds for WF1. segments: " << _zzMap[wf1].size() << " Idx: " << idx1 << std::endl; }
+    */
+    if (_zzMap[wf2].size() > idx2){
+      auto const& reg2 = _zzMap[wf2][idx2];
+      short start2 = reg2.first;
+      short end2   = reg2.second;
+      //if (_verbose) { std::cout << "Wf2: [" << start2 << ", " << end2 << "] " << tick << std::endl; }
+      if (end2 < tick)
+	idx2 += 1;
+      if ( (tick > start2) and (tick < end2) )
+	zz2 = true;
+    }
+    /*
+    else
+      if (_verbose) { std::cout << "Out of bounds for WF1. segments: " << _zzMap[wf1].size() << " Idx: " << idx1 << std::endl; }
+    */
+    if ( (zz1 == true) and (zz2 == true) )
+      return true;
+    
+    return false;
+  }
+
   
 }
 #endif

@@ -14,6 +14,7 @@ OBJECTS = $(SOURCES:.cxx=.o)
 INCFLAGS = -I.                       #Include itself
 INCFLAGS += $(shell larlite-config --includes)
 INCFLAGS += -I$(LARLITE_USERDEVDIR)
+INCFLAGS += -I$(LARLITE_USERDEVDIR)/RecoTool/AnalysisAlg
 
 # platform-specific options
 OSNAME          = $(shell uname -s)
@@ -29,6 +30,7 @@ CXXFLAGS +=  `root-config --cflags`
 CINTFLAGS += "-p"
 
 LDFLAGS += $(shell larlite-config --libs)
+LDFLAGS += -L$(LARLITE_LIBDIR) -lRecoTool_AnalysisAlg
 
 # call the common GNUmakefile
 include $(LARLITE_BASEDIR)/Makefile/GNUmakefile.CORE
