@@ -11,6 +11,8 @@ namespace larlite {
   {
     _name = "ShowerEnergy";
     _fout = 0;
+    // keep track of IDE ID
+    _id = 0;
     LArProp = (::larutil::LArProperties*)(::larutil::LArProperties::GetME());
   }
 
@@ -26,6 +28,8 @@ namespace larlite {
     _ide_tree->Branch("_e",&_e,"e/D");
     _ide_tree->Branch("_q",&_q,"q/D");
     _ide_tree->Branch("_pl",&_pl,"pl/I");
+    _ide_tree->Branch("_t",&_t,"t/I");
+    _ide_tree->Branch("_id",&_id,"id/I");
     _ide_tree->Branch("_eboxU",&_eboxU,"eboxU/D");
     _ide_tree->Branch("_eboxV",&_eboxV,"eboxV/D");
     _ide_tree->Branch("_eboxY",&_eboxY,"eboxY/D");
@@ -33,6 +37,11 @@ namespace larlite {
     _ide_tree->Branch("_ebrkV",&_ebrkV,"ebrkV/D");
     _ide_tree->Branch("_ebrkY",&_ebrkY,"ebrkY/D");
     _ide_tree->Branch("_qLife",&_qLife,"qLife/D");
+    _ide_tree->Branch("_theta",&_theta,"theta/D");
+    _ide_tree->Branch("_pitchU",&_pitchU,"pitchU/D");
+    _ide_tree->Branch("_pitchV",&_pitchV,"pitchV/D");
+    _ide_tree->Branch("_pitchY",&_pitchY,"pitchY/D");
+    _ide_tree->Branch("_phi",&_phi,"phi/D");
 
     // Prepare Shower Tree
     if (_shr_tree)
@@ -61,7 +70,8 @@ namespace larlite {
     _shr_tree->Branch("_px",&_px,"px/D");
     _shr_tree->Branch("_py",&_py,"py/D");
     _shr_tree->Branch("_pz",&_pz,"pz/D");
-    
+    _shr_tree->Branch("_theta",&_theta,"theta/D");
+    _shr_tree->Branch("_phi",&_phi,"phi/D");
 
     return true;
   }
@@ -114,17 +124,16 @@ namespace larlite {
 
 
     // get dx for shower
-    double theta = acos(_py/sqrt(_px*_px+_py*_py+_pz*_pz));
-    double phi   = atan(_pz/_px);
+    _theta = acos(_py/sqrt(_px*_px+_py*_py+_pz*_pz));
+    _phi   = atan(_pz/_px);
     // calculate pitch
     //_pitchU = larutil::GeometryUtilities::GetME()->CalculatePitch(0,phi,theta);
     //_pitchV = larutil::GeometryUtilities::GetME()->CalculatePitch(1,phi,theta);
     //_pitchY = larutil::GeometryUtilities::GetME()->CalculatePitch(2,phi,theta);
-    _pitchU = larutil::GeometryUtilities::GetME()->PitchInView(0,phi,theta);
-    _pitchV = larutil::GeometryUtilities::GetME()->PitchInView(1,phi,theta);
-    _pitchY = larutil::GeometryUtilities::GetME()->PitchInView(2,phi,theta);
+    _pitchU = larutil::GeometryUtilities::GetME()->PitchInView(0,_phi,_theta);
+    _pitchV = larutil::GeometryUtilities::GetME()->PitchInView(1,_phi,_theta);
+    _pitchY = larutil::GeometryUtilities::GetME()->PitchInView(2,_phi,_theta);
 
-    double spacing = 0.3; // in cm
 
     // save all simchannel information
     for (size_t i=0; i < evt_simch->size(); i++){
@@ -139,6 +148,9 @@ namespace larlite {
       std::map<unsigned short, std::vector<larlite::ide> >::const_iterator it;
       for (it = ideMap.begin(); it != ideMap.end(); it++){
 	auto const& ideVec = it->second;
+	// get time-tick
+	_t = it->first-3200;
+	_id += 1;
 	for (auto const& ide : ideVec){
 	  _e = ide.energy;
 	  _x = ide.x;
@@ -147,7 +159,10 @@ namespace larlite {
 	  _q = ide.numElectrons;
 	  // time needs to be in time-ticks
 	  double ttick = 3200-(_x/256.)*3200.;
+	  // lifetime correction using time reconstructed from x position
 	  _qLife = _q/_calo.LifetimeCorrection(ttick);
+	  // lifetime correction using time from Tick
+	  //_qLife = _q*_calo.LifetimeCorrection(_t);
 	  if (_pl == 0) {
 	    _EideU += _e;
 	    _QideU += _qLife;

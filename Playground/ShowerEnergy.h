@@ -69,10 +69,13 @@ namespace larlite {
     double _pitchU, _pitchV, _pitchY; /// pitch for various planes [ cm ]
     double _X, _Y, _Z;
     double _px, _py, _pz;
+    double _phi, _theta;
     
     // IDE tree
     TTree* _ide_tree;
-    int _pl;
+    int _pl; // plane for this IDE
+    int _id; // ID for this IDE
+    int _t;  // time-tick for this IDE
     double _x, _y, _z; /// coordinates of IDE deposition point
     double _e; // energy deposited by this IDE
     double _eboxU, _eboxV, _eboxY; // energy seen by each plane after box model correction
