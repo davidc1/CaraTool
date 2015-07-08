@@ -25,7 +25,8 @@
 #include "LArUtil/GeometryUtilities.h"
 #include "LArUtil/LArProperties.h"
 #include "LArUtil/DetectorProperties.h"
-#include <cmath>
+// include point
+#include "Position.h"
 
 namespace larlite {
   /**
@@ -56,6 +57,9 @@ namespace larlite {
     protected:
 
     std::string _ShowerProducer;
+
+    // create map 3dPoint -> (E,e-)
+    void makeMap(const larlite::event_simch* evt_simch);
 
     // shr tree
     TTree* _shr_tree;
@@ -94,6 +98,10 @@ namespace larlite {
 
     // Double max
     double _max = std::numeric_limits<double>::max();
+
+    // Map from voxel -> (E,e-)
+    std::map<::radius::Point,std::pair<double,double> > _vxlMap;
+    //std::map<std::vector<double>,std::pair<double,double> > _vxlMap;
 
   };
 }

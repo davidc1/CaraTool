@@ -102,13 +102,16 @@ namespace larlite {
       return false;
     }
 
-
     // choose events with a single shower
     if (evt_shower->size() != 1){
       std::cout << "Event has != 1 showers! Exit..." << std::endl;
       return true;
     }
 
+    // make simch map
+    //std::cout << "make map" << std::endl;
+    makeMap(evt_simch);
+    //std::cout << "make done!" << std::endl;
 
     // get mcshower's info
     auto const& shr = evt_shower->at(0);
@@ -134,7 +137,26 @@ namespace larlite {
     _pitchV = larutil::GeometryUtilities::GetME()->PitchInView(1,_phi,_theta);
     _pitchY = larutil::GeometryUtilities::GetME()->PitchInView(2,_phi,_theta);
 
-
+    // loop over voxels
+    std::map<::radius::Point,std::pair<double,double> >::iterator it;
+    for (it = _vxlMap.begin(); it != _vxlMap.end(); it++){
+      auto const& pos = it->first;
+      _x = pos[0];
+      _y = pos[1];
+      _z = pos[2];
+      _e = (it->second).first;
+      _q = (it->second).second;
+      double ttick = 3200-(_x/256.)*3200.;
+      _qLife =  _q/_calo.LifetimeCorrection(ttick);
+      _eboxY = 0.03*LArProp->ModBoxCorrection(_qLife/(0.03));
+      _ebrkY = 0.03*LArProp->BirksCorrection(_qLife/(0.03));      
+      _EboxY += _eboxY;
+      _EbrkY += _ebrkY;
+      _ide_tree->Fill();
+    }
+    
+    
+    /*
     // save all simchannel information
     for (size_t i=0; i < evt_simch->size(); i++){
       auto const& simch = evt_simch->at(i);
@@ -197,6 +219,8 @@ namespace larlite {
 	}// for all ides
       }// for all ideMaps
     }// for all simchannels
+    */
+
 	
     _shr_tree->Fill();
 
@@ -235,5 +259,50 @@ namespace larlite {
     return;
   }
 
+
+  void ShowerEnergy::makeMap(const larlite::event_simch* evt_simch){
+
+    _vxlMap.clear();
+
+    std::pair<double,double> pair;
+
+    for (size_t i=0; i < evt_simch->size(); i++){
+
+      auto const simch = evt_simch->at(i);
+      
+      UInt_t ch = simch.Channel();
+      _pl = larutil::Geometry::GetME()->ChannelToPlane(ch);
+      // if not Y-plane, continue
+      if (_pl != 2)
+	continue;
+      
+      // get map of TDC -> vector<ides> for this simch object
+      const std::map<unsigned short, std::vector<larlite::ide> > ideMap = simch.TDCIDEMap();
+      // create iterator to loop through ides
+      std::map<unsigned short, std::vector<larlite::ide> >::const_iterator it;
+      for (it = ideMap.begin(); it != ideMap.end(); it++){
+	auto const& ideVec = it->second;
+
+	for (auto const& ide : ideVec){
+	  
+	  // lifetime correct the energy
+	  
+	  std::vector<double> vv = {ide.x,ide.y,ide.z};
+	  ::radius::Point v(vv);
+	  if (_vxlMap.find(v) == _vxlMap.end()){
+	    // new voxel -> make pair
+	    pair = std::make_pair(ide.energy,ide.numElectrons);
+	    _vxlMap[v] = pair;
+	  }
+	  else{
+	    // voxel already exists
+	    _vxlMap[v].first  += ide.energy;
+	    _vxlMap[v].second += ide.numElectrons;
+	  }
+	}// for all ides
+      }// for all ide vectors in map
+    }// for all simchannels
+  }
+  
 }
 #endif

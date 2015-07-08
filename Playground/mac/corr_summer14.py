@@ -23,7 +23,8 @@ for f in temp_files:
     subrun=f.replace('LArLite-%03d-' % run,'')
     subrun=int(subrun.replace('.root',''))
     files[subrun]=f
-
+files = {}
+files[0] = 'LArTF_Test_519_larlight.root'
 subrun_start = files.keys()[0]
 subrun_end   = files.keys()[-1]
 if len(sys.argv)==4:
@@ -34,8 +35,7 @@ else:
     my_proc.set_ana_output_file("corr_run%03d.root" % run);
 
 for x in files.keys():
-    if x >= subrun_start and x<= subrun_end:
-        my_proc.add_input_file('%s/%s' % (DATA_DIR,files[x]))
+    my_proc.add_input_file('%s/%s' % (DATA_DIR,files[x]))
 
 #my_proc.set_input_rootdir("scanner")
 # Specify IO mode
@@ -80,7 +80,7 @@ print  "Finished configuring ana_processor. Start event loop!"
 print
 
 # Let's run it.
-my_proc.run(5,1)
+my_proc.run(0,10)
 
 # done!
 print
