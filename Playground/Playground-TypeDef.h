@@ -6,7 +6,6 @@
 #define LARLITE_PLAYGROUND_TYPEDEF_H
 
 // Header files included here
-#include "ShowerInfo.h"
 #include "dEdxShowerCheck.h"
 #include "MuonCalorimetry.h"
 #include "KazuAna.h"
@@ -16,7 +15,6 @@
 // Class forward declaration here
 namespace larlite {
 
-  class ShowerInfo;
   class dEdxShowerCheck;
   class MuonCalorimetry;
   class ZigZag;
