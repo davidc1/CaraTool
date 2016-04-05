@@ -19,9 +19,15 @@
 #pragma link C++ class KazuAna+;
 #pragma link C++ class larlite::VertexFinder+;
 #pragma link C++ class larlite::HitViewer+;
+#pragma link C++ class larlite::DuplicateEvents+;
+#pragma link C++ class larlite::Pi0Filter+;
+#pragma link C++ class larlite::EmptyModule+;
 //ADD_NEW_CLASS ... do not change this line
 
 #endif
+
+
+
 
 
 
