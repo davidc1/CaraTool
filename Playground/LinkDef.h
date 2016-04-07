@@ -22,9 +22,11 @@
 #pragma link C++ class larlite::DuplicateEvents+;
 #pragma link C++ class larlite::Pi0Filter+;
 #pragma link C++ class larlite::EmptyModule+;
+#pragma link C++ class larlite::EventFilter+;
 //ADD_NEW_CLASS ... do not change this line
 
 #endif
+
 
 
 
