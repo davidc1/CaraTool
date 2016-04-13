@@ -4,7 +4,7 @@
 #include "VertexFinder.h"
 #include "DataFormat/hit.h"
 #include "DataFormat/mctruth.h"
-#include "LArUtil/GeometryUtilities.h"
+#include "LArUtil/GeometryHelper.h"
 #include "LArUtil/Geometry.h"
 #include <math.h>
 
@@ -12,8 +12,8 @@ namespace larlite {
 
   bool VertexFinder::initialize() {
 
-    _wire2cm  = larutil::GeometryUtilities::GetME()->WireToCm();
-    _time2cm  = larutil::GeometryUtilities::GetME()->TimeToCm();
+    _wire2cm  = larutil::GeometryHelper::GetME()->WireToCm();
+    _time2cm  = larutil::GeometryHelper::GetME()->TimeToCm();
     _detwidth = 2*larutil::Geometry::GetME()->DetHalfWidth();
 
     if (!_vtx_tree) { _vtx_tree = new TTree("_vtx_tree","Vertex Tree"); }

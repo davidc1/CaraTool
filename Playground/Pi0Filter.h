@@ -16,6 +16,7 @@
 #define LARLITE_PI0FILTER_H
 
 #include "Analysis/ana_base.h"
+#include "TTree.h"
 
 namespace larlite {
   /**
@@ -27,7 +28,7 @@ namespace larlite {
   public:
 
     /// Default constructor
-    Pi0Filter(){ _name="Pi0Filter"; _fout=0; _n_pi0s = 1; }
+    Pi0Filter();
 
     /// Default destructor
     virtual ~Pi0Filter(){}
@@ -44,6 +45,12 @@ namespace larlite {
 
     // number of Pi0s requested in the neutrino interaction
     int _n_pi0s;
+
+    TTree* _pi0_tree;
+    double _pi0_E;
+    double _shr1_E, _shr2_E;
+    double _shr1_Edep, _shr2_Edep;
+    double _angle;
     
   };
 }

@@ -34,7 +34,6 @@ CINTFLAGS += "-p"
 LDFLAGS += $(shell larlite-config --libs)
 LDFLAGS += -L$(LARLITE_LIBDIR) -lRecoTool_AnalysisAlg
 LDFLAGS += -L$(LARLITE_LIBDIR) -lRecoTool_ClusterRecoUtil
-LDFLAGS += -L$(LARLITE_LIBDIR) -lRecoTool_FANN
 
 # call the common GNUmakefile
 include $(LARLITE_BASEDIR)/Makefile/GNUmakefile.CORE

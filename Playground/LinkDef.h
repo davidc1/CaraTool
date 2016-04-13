@@ -9,8 +9,6 @@
 #pragma link off all classes;
 #pragma link off all functions;
 
-#pragma link C++ class larlite::ShowerEnergy+;
-#pragma link C++ class larlite::HitEnergy+;
 #pragma link C++ class larlite::dEdxShowerCheck+;
 #pragma link C++ class larlite::MuonCalorimetry+;
 #pragma link C++ class larlite::ZigZag+;
