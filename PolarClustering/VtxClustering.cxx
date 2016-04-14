@@ -81,6 +81,8 @@ namespace larlite {
     vtx_w_cm[2] = vtx_Y.w;
     vtx_t_cm[2] = vtx_Y.t;
 
+    std::cout << "vtx w " << vtx_w_cm[2] << std::endl;
+
 
     std::cout << "hits : " << ev_hit->size() << std::endl;
 
@@ -123,7 +125,9 @@ namespace larlite {
 	_Ymapcm[i]  = cm_coord;
       }
 
-    }
+    }// finish loop over hits
+
+    
       
 
     return true;
