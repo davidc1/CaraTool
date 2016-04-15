@@ -27,7 +27,7 @@ namespace larlite {
   public:
 
     /// Default constructor
-    VtxClustering(){ _name="VtxClustering"; _fout=0;}
+    VtxClustering();
 
     /// Default destructor
     virtual ~VtxClustering(){}
@@ -76,6 +76,24 @@ namespace larlite {
     std::vector<double> vtx_w_cm;
     std::vector<double> vtx_t_cm;
 
+    // angular width of bin (radians)
+    double _bin_width;
+    double _bin_width_deg;
+
+    // angle bins in the 3 planes
+    // 1st index is anlge bin
+    // 2nd index is hit index in ev_hit vector
+    std::vector<std::vector<size_t> > _binU, _binV, _binY;
+
+    
+    // cluster in polar angle
+    void FindPolarClusters(const std::vector<std::vector<size_t> > polarHits,
+			   std::vector<std::vector<size_t> > &polarClusters);
+
+
+    // threshold for number of hits @ a certain angle to identify a cluster
+    size_t _thresh;
+      
   };
 }
 #endif
