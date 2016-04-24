@@ -16,6 +16,11 @@
 #define LARLITE_VTXCLUSTERING_H
 
 #include "Analysis/ana_base.h"
+#include "LArUtil/GeometryHelper.h"
+#include "DataFormat/hit.h"
+#include "DataFormat/vertex.h"
+#include "TTree.h"
+
 
 namespace larlite {
   /**
@@ -41,37 +46,41 @@ namespace larlite {
     void setHitProducer(std::string s) { _hit_producer = s; }
     void setVtxProducer(std::string s) { _vtx_producer = s; }
 
-    std::map<size_t, std::pair<double,double> > getUMappol() { return _Umappol; }
-    std::map<size_t, std::pair<double,double> > getVMappol() { return _Vmappol; }
-    std::map<size_t, std::pair<double,double> > getYMappol() { return _Ymappol; }
+    /**
+       @brief Get Polar Hit Map
+       @input int -> plane
+     */
+    std::map<size_t, std::pair<double,double> > getPolarMap(int pl) { return _HitMap_v[pl]; }
 
-    std::map<size_t, std::pair<double,double> > getUMapcm() { return _Umapcm; }
-    std::map<size_t, std::pair<double,double> > getVMapcm() { return _Vmapcm; }
-    std::map<size_t, std::pair<double,double> > getYMapcm() { return _Ymapcm; }
+    /**
+       @brief Get Clusters
+       @input int -> plane
+     */
+    
 
     std::vector<double> getVtxW() { return vtx_w_cm; }
     std::vector<double> getVtxT() { return vtx_t_cm; }
 
-    bool _has_vtx;
-
   protected:
+
+    // Math constants / Services:
+    // Pi
+    double PI;
+    // Geometry Service
+    const ::larutil::Geometry       *_geom;
+    const ::larutil::GeometryHelper *_geomH;
+    double _w2cm;
+    double _t2cm;
 
     std::string _hit_producer;
     std::string _vtx_producer;
 
-    // map of idx -> (r,theta) for U plane
-    std::map<size_t, std::pair<double,double> > _Umappol;
-    // map of idx -> (r,theta) for V plane
-    std::map<size_t, std::pair<double,double> > _Vmappol;
-    // map of idx -> (r,theta) for Y plane
-    std::map<size_t, std::pair<double,double> > _Ymappol;
 
-    // map of idx -> (r,theta) for U plane
-    std::map<size_t, std::pair<double,double> > _Umapcm;
-    // map of idx -> (r,theta) for V plane
-    std::map<size_t, std::pair<double,double> > _Vmapcm;
-    // map of idx -> (r,theta) for Y plane
-    std::map<size_t, std::pair<double,double> > _Ymapcm;
+    /**
+       @brief vector of polar hit coordinates
+     */
+    std::vector< std::map< size_t, std::pair<double,double> > > _HitMap_v;
+    
 
     std::vector<double> vtx_w_cm;
     std::vector<double> vtx_t_cm;
@@ -79,21 +88,64 @@ namespace larlite {
     // angular width of bin (radians)
     double _bin_width;
     double _bin_width_deg;
+    size_t _n_bins;
 
-    // angle bins in the 3 planes
-    // 1st index is anlge bin
-    // 2nd index is hit index in ev_hit vector
-    std::vector<std::vector<size_t> > _binU, _binV, _binY;
+    /**
+       @brief Angle bins in the 3 planes
+       @detail
+       1st index -> plane
+       2nd index -> angle bin
+       3rd index -> hit index in ev_hit vector
+     */
+    std::vector< std::vector<std::vector<size_t> > > _PolarBin_v;
 
-    
-    // cluster in polar angle
-    void FindPolarClusters(const std::vector<std::vector<size_t> > polarHits,
-			   std::vector<std::vector<size_t> > &polarClusters);
+    /**
+       @brief vector containing clustered vectors of indices, per plane
+       @detail
+       1st index -> plane
+       2nd index -> cluster index
+       3rd index -> hit index
+     */
+    std::vector< std::vector< std::vector<size_t> > > _PolarClusters_v;
+
+    /**
+       @brief Function to perform polar clustering
+       @input vector of vector of hit indices. 1st index denotes the angle bin.
+       @output vector of vector of output clusters
+     */
+    void FindPolarClusters();
+
+    /**
+       @brief project vertex onto the 3 planes
+     */
+    void projectVtx(const larlite::vertex vtx);
+
+    /**
+       @brief fill polar hit maps
+       @input larlite event_hit object
+       @output per-plane maps  of hit index -> polar coordinate pair 
+     */
+    void fillPolarHitMap(const larlite::event_hit *ev_hit);
+
+    /**
+       @brief Bin by polar angle the hits in each plane
+       @detail Use _HitMap_v to get the polar coordinates of each hit
+       Then fill _PolarBin_v vector by using the angular information.
+     */
+    void PolarBinning();
 
 
     // threshold for number of hits @ a certain angle to identify a cluster
     size_t _thresh;
-      
+
+    // Add a Tree on which to save the polar, angular, charge amount per event
+    TTree* _polar_tree;
+    std::vector<double> _angle_v;
+    std::vector<double> _radius_v;
+    std::vector<double> _charge_v;
+    std::vector<int>    _pl_v;
+
+    
   };
 }
 #endif
