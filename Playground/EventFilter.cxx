@@ -7,13 +7,16 @@ namespace larlite {
 
   bool EventFilter::initialize() {
 
+    _out_file.open("selected_events.txt");
+
     return true;
   }
   
   bool EventFilter::analyze(storage_manager* storage) {
 
-    auto event = storage->event_id();
-    auto run   = storage->run_id();
+    auto event  = storage->event_id();
+    auto subrun = storage->subrun_id();
+    auto run    = storage->run_id();
 
     bool found = false;
     
@@ -25,6 +28,8 @@ namespace larlite {
 
       if ( (evinfo.first == run) and (evinfo.second == event) ){
 	std::cout << "Found event " << event << " @ run " << run << std::endl;
+	_out_file << run << " " << subrun << " " << event << std::endl;
+	//	  << vtx.X() << " " << vtx.Y() << " " << vtx.Z() << "\n";
 	found = true;
 	break;
       }
@@ -37,6 +42,8 @@ namespace larlite {
   }
 
   bool EventFilter::finalize() {
+
+    _out_file.close();
 
     return true;
   }
