@@ -1,9 +1,9 @@
 /**
- * \file EventFilter.h
+ * \file CopyVtx.h
  *
  * \ingroup Playground
  * 
- * \brief Class def header for a class EventFilter
+ * \brief Class def header for a class CopyVtx
  *
  * @author davidc1
  */
@@ -12,40 +12,41 @@
 
     @{*/
 
-#ifndef LARLITE_EVENTFILTER_H
-#define LARLITE_EVENTFILTER_H
+#ifndef LARLITE_COPYVTX_H
+#define LARLITE_COPYVTX_H
 
 #include "Analysis/ana_base.h"
-#include <fstream>
+#include "TVector3.h"
 
 namespace larlite {
   /**
-     \class EventFilter
+     \class CopyVtx
      User custom analysis class made by SHELL_USER_NAME
    */
-  class EventFilter : public ana_base{
+  class CopyVtx : public ana_base{
   
   public:
 
     /// Default constructor
-    EventFilter(){ _name="EventFilter"; _fout=0;}
+    CopyVtx(){ _name="CopyVtx"; _fout=0;}
 
     /// Default destructor
-    virtual ~EventFilter(){ RunEvent_v.clear(); }
+    virtual ~CopyVtx(){}
 
     virtual bool initialize();
 
     virtual bool analyze(storage_manager* storage);
 
     virtual bool finalize();
-    
+
     void addEvent(const int run, const int event);
+    
+    void addVertex(const double x, const double y, const double z);
 
   protected:
 
     std::vector<std::pair<int,int> > RunEvent_v;
-
-    ofstream _out_file;
+    std::vector< TVector3 > RunVertex_v;
     
   };
 }

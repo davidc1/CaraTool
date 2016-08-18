@@ -1,51 +1,47 @@
 /**
- * \file EventFilter.h
+ * \file NeutrinoFilter.h
  *
- * \ingroup Playground
+ * \ingroup App
  * 
- * \brief Class def header for a class EventFilter
+ * \brief Class def header for a class NeutrinoFilter
  *
  * @author davidc1
  */
 
-/** \addtogroup Playground
+/** \addtogroup App
 
     @{*/
 
-#ifndef LARLITE_EVENTFILTER_H
-#define LARLITE_EVENTFILTER_H
+#ifndef LARLITE_NEUTRINOFILTER_H
+#define LARLITE_NEUTRINOFILTER_H
 
 #include "Analysis/ana_base.h"
-#include <fstream>
 
 namespace larlite {
   /**
-     \class EventFilter
+     \class NeutrinoFilter
      User custom analysis class made by SHELL_USER_NAME
    */
-  class EventFilter : public ana_base{
+  class NeutrinoFilter : public ana_base{
   
   public:
 
     /// Default constructor
-    EventFilter(){ _name="EventFilter"; _fout=0;}
+    NeutrinoFilter(){ _name="NeutrinoFilter"; _fout=0;}
 
     /// Default destructor
-    virtual ~EventFilter(){ RunEvent_v.clear(); }
+    virtual ~NeutrinoFilter(){}
 
     virtual bool initialize();
 
     virtual bool analyze(storage_manager* storage);
 
     virtual bool finalize();
-    
-    void addEvent(const int run, const int event);
 
   protected:
 
-    std::vector<std::pair<int,int> > RunEvent_v;
-
-    ofstream _out_file;
+    int _tot;
+    int _pass;
     
   };
 }

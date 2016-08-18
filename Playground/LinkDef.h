@@ -24,19 +24,9 @@
 #pragma link C++ class larlite::CosmicT0+;
 #pragma link C++ class larlite::MuDecayInFlight+;
 #pragma link C++ class larlite::CreateTruthVertex+;
+#pragma link C++ class larlite::NeutrinoFilter+;
+#pragma link C++ class larlite::DumpEvents+;
+#pragma link C++ class larlite::CopyVtx+;
 //ADD_NEW_CLASS ... do not change this line
 
 #endif
-
-
-
-
-
-
-
-
-
-
-
-
-
