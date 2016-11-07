@@ -1,56 +1,53 @@
 /**
- * \file DumpEvents.h
+ * \file ShowerSelection.h
  *
  * \ingroup Playground
  * 
- * \brief Class def header for a class DumpEvents
+ * \brief Class def header for a class ShowerSelection
  *
- * @author davidc1
+ * @author david
  */
 
 /** \addtogroup Playground
 
     @{*/
 
-#ifndef LARLITE_DUMPEVENTS_H
-#define LARLITE_DUMPEVENTS_H
+#ifndef LARLITE_SHOWERSELECTION_H
+#define LARLITE_SHOWERSELECTION_H
 
 #include "Analysis/ana_base.h"
-#include <fstream>
+#include "TTree.h"
 
 namespace larlite {
   /**
-     \class DumpEvents
+     \class ShowerSelection
      User custom analysis class made by SHELL_USER_NAME
    */
-  class DumpEvents : public ana_base{
+  class ShowerSelection : public ana_base{
   
   public:
 
     /// Default constructor
-    DumpEvents(){ _name="DumpEvents"; _fout=0;}
+    ShowerSelection();
 
     /// Default destructor
-    virtual ~DumpEvents(){}
+    virtual ~ShowerSelection(){}
 
-    /** IMPLEMENT in DumpEvents.cc!
-        Initialization method to be called before the analysis event loop.
-    */ 
     virtual bool initialize();
 
-    /** IMPLEMENT in DumpEvents.cc! 
-        Analyze a data event-by-event  
-    */
     virtual bool analyze(storage_manager* storage);
 
-    /** IMPLEMENT in DumpEvents.cc! 
-        Finalize method to be called after all events processed.
-    */
     virtual bool finalize();
 
   protected:
 
-    std::ofstream _fileout;
+    TTree* _tree;
+    double _pi0_energy;
+    std::vector<int>    _clus_nhits_v;
+    std::vector<double> _clus_vtxdist_v;
+    std::vector<int>    _clus_plane_v;
+
+    double _wire2cm, _time2cm;
     
   };
 }

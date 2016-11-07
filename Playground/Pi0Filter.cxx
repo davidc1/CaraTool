@@ -34,7 +34,7 @@ namespace larlite {
     auto *ev_mctruth = storage->get_data<event_mctruth>("generator");
 
     if ( (!ev_mctruth) or (ev_mctruth->size() == 0) )
-      return false;
+      return false; 
 
     // get all MCParticles
     auto mctruth = ev_mctruth->at(0);

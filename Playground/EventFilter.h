@@ -45,7 +45,7 @@ namespace larlite {
 
     std::vector<std::pair<int,int> > RunEvent_v;
 
-    ofstream _out_file;
+    std::ofstream _out_file;
     
   };
 }
