@@ -27,6 +27,8 @@
 #pragma link C++ class larlite::NeutrinoFilter+;
 #pragma link C++ class larlite::DumpEvents+;
 #pragma link C++ class larlite::CopyVtx+;
+#pragma link C++ class larlite::ShowerSelection+;
 //ADD_NEW_CLASS ... do not change this line
 
 #endif
+
