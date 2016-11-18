@@ -38,7 +38,7 @@ namespace larlite {
   bool ShowerSelection::analyze(storage_manager* storage) {
 
     auto ev_mctruth = storage->get_data<event_mctruth>("generator");
-    auto ev_clus    = storage->get_data<event_cluster>("rawcluster");
+    auto ev_clus    = storage->get_data<event_cluster>("photon");
     auto *ev_vtx    = storage->get_data<event_vertex> ("mcvertex");
     // get hits associated to clusters
     larlite::event_hit* ev_hit = nullptr;
