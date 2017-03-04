@@ -21,7 +21,7 @@ namespace larlite {
     auto subrun = storage->subrun_id();
 
     auto ev_vtx = storage->get_data<event_vertex>("numuCC_vertex");
-    auto ev_trk = storage->get_data<event_track>("numuCC_vertex");
+    auto ev_trk = storage->get_data<event_track>("numuCC_track");
 
     // grab vertex
     auto const& vtx = ev_vtx->at(0);
