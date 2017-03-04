@@ -25,6 +25,7 @@ namespace larlite {
     _tree_dist->Branch("_dw",&_dw,"dw/D");
     _tree_dist->Branch("_dt",&_dt,"dt/D");
     _tree_dist->Branch("_d" ,&_d ,"d/D" );
+    _tree_dist->Branch("_d_truth" ,&_d_truth ,"_d_truth/D" );
 
     if (_tree_calo) delete _tree_calo;
     _tree_calo = new TTree("_tree_calo","calorimetry");
@@ -36,11 +37,16 @@ namespace larlite {
     _tree_calo->Branch("_z",&_z,"z/D");
     _tree_calo->Branch("_pz",&_pz,"pz/D");
     _tree_calo->Branch("_dqds" ,&_dqds ,"dqds/D" );
+    _tree_calo->Branch("_d_truth" ,&_d_truth ,"_d_truth/D" );
+    _tree_calo->Branch("_x_end_reco" ,&_x_end_reco ,"x_end_reco/D");
+    _tree_calo->Branch("_x_end_truth",&_x_end_truth,"x_end_truth/D");
 
     return true;
   }
   
   bool MicheldEdx::analyze(storage_manager* storage) {
+    
+    auto ev_mctrks = storage->get_data<event_mctrack>("mcreco");
   
     auto ev_tracks = storage->get_data<event_track>("pandoraCosmic");
 
@@ -71,6 +77,20 @@ namespace larlite {
       // does this track match the Michel?
       if ( MatchTrack(trk,mustop) == false ) continue;
 
+      // find the best-matching truth stopping muon
+      _d_truth = 100.;
+      for (size_t mctidx = 0; mctidx < ev_mctrks->size(); mctidx++) {
+	auto const& mctrk = ev_mctrks->at(mctidx);
+	if ( (mctrk.PdgCode() != 13) && (mctrk.PdgCode() != -13) )
+	  continue;
+	if (mctrk.size() < 2) continue;
+	double d = MatchTruth(trk,mctrk);
+	if (d < _d_truth){
+	  _d_truth = d;
+	  _x_end_truth = mctrk.at(mctrk.size()-1).X();
+	}// if best match so far
+      }// for all mctracks
+
       //std::cout << "found a match with distance " << _d << std::endl;
 
       auto const& calo_ass_v = ass_trk_calo_v.at(t);
@@ -96,6 +116,8 @@ namespace larlite {
 	  }
 
 	auto const& trkend = TrackEnd(trk);
+
+	_x_end_reco = trkend.X();
 	
 	for (size_t n=0; n < dqds_v.size(); n++){
 
@@ -180,6 +202,28 @@ namespace larlite {
     return false;
   }
 
+
+  double MicheldEdx::MatchTruth(const larlite::track& track, const larlite::mctrack& mctrk) {
+
+    // true and MC track must match in (Y,Z) coordinates.
+
+    auto track_end   = track.End();
+    auto track_start = track.Vertex();
+
+    if (track_end.Y() > track_start.Y()){
+      track_end   = track.Vertex();
+      track_start = track.End();
+    }
+
+    auto const& mctrk_end = mctrk.at( mctrk.size() -1 );
+
+    double d2D = sqrt( ( mctrk_end.Y() - track_end.Y() ) * ( mctrk_end.Y() - track_end.Y() ) +
+		       ( mctrk_end.Z() - track_end.Z() ) * ( mctrk_end.Z() - track_end.Z() ) );
+
+    //std::cout << "d2D for this track " << d2D << std::endl;
+
+    return d2D;
+  }
 
   void MicheldEdx::AddMichel(const int& run, const int& event, const double& xpos, const double& zpos) {
 

@@ -18,6 +18,7 @@
 #include "Analysis/ana_base.h"
 
 #include "DataFormat/track.h"
+#include "DataFormat/mctrack.h"
 
 namespace larlite {
   /**
@@ -54,6 +55,8 @@ namespace larlite {
   protected:
 
     bool MatchTrack(const larlite::track& trk, const std::pair<double,double> mustop);
+    
+    double MatchTruth(const larlite::track& track, const larlite::mctrack& mctrk);
 
     TVector3 TrackEnd(const larlite::track& trk);
 
@@ -63,6 +66,7 @@ namespace larlite {
     double _dw;
     double _dt;
     double _d;
+    double _d_truth;
 
     TTree* _tree_calo;
     double _rr;
@@ -70,6 +74,7 @@ namespace larlite {
     double _dqds;
     double _x, _y, _z;
     double _px, _py, _pz;
+    double _x_end_reco, _x_end_truth;
     
   };
 }
