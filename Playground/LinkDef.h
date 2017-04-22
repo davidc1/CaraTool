@@ -20,7 +20,7 @@
 #pragma link C++ class larlite::DuplicateEvents+;
 #pragma link C++ class larlite::Pi0Filter+;
 #pragma link C++ class larlite::EmptyModule+;
-#pragma link C++ class larlite::EventFilter+;
+#pragma link C++ class larlite::EventsFilter+;
 #pragma link C++ class larlite::CosmicT0+;
 #pragma link C++ class larlite::MuDecayInFlight+;
 #pragma link C++ class larlite::CreateTruthVertex+;
@@ -28,7 +28,11 @@
 #pragma link C++ class larlite::DumpEvents+;
 #pragma link C++ class larlite::CopyVtx+;
 #pragma link C++ class larlite::ShowerSelection+;
+#pragma link C++ class larlite::SaveVtxTrack+;
+#pragma link C++ class larlite::SimPh+;
 //ADD_NEW_CLASS ... do not change this line
 
 #endif
+
+
 
