@@ -27,6 +27,7 @@
 #pragma link C++ class larlite::ShowerSelection+;
 #pragma link C++ class larlite::SaveVtxTrack+;
 #pragma link C++ class larlite::SimPh+;
+#pragma link C++ class larlite::SimPhotonStudies+;
 #pragma link C++ class larlite::MicheldEdx+;
 #pragma link C++ class larlite::FilterShower+;
 #pragma link C++ class larlite::ShowerHitStudy+;
