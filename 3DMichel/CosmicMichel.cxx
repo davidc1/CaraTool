@@ -81,7 +81,7 @@ namespace larlite {
 	}// if in FV
       }// if muon
     }
-    
+
     if (!ev_trk or (ev_trk->size() == 0)){
       print(larlite::msg::kWARNING,__FUNCTION__,"no tracks");
       return true;
@@ -112,8 +112,10 @@ namespace larlite {
 	
 	double dd = ( (_ye_rc - endpt[1])*(_ye_rc - endpt[1]) + (_ze_rc - endpt[2])*(_ze_rc - endpt[2]) );
 	if (dd < ddmin) { ddmin = dd; idxmin = k; _dmin = sqrt(dd); }
-	
       }// for all MC tracks
+
+      if (ddmin == 100000.) continue;
+      
       _xe_mc = mu_end_pt_v[idxmin][0];
       _ye_mc = mu_end_pt_v[idxmin][1];
       _ze_mc = mu_end_pt_v[idxmin][2];
@@ -149,9 +151,10 @@ namespace larlite {
 	if (rr_v[p] > _rr_max) { _rr_max = rr_v[p]; }
 
       }// for all points in calorimetry
-      
-      _tmean.CalcTruncMean(_rr_v,_dqdx_v,_dqdx_trunc_v);
 
+      if ( _rr_max < 100) continue;
+
+      _tmean.CalcTruncMean(_rr_v,_dqdx_v,_dqdx_trunc_v);
       _tree_rc->Fill();
       
     }// for all calo objects
