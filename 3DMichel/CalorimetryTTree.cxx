@@ -27,6 +27,7 @@ namespace larlite {
     _tree->Branch("_ye_mc",&_ye_mc,"ye_mc/D");
     _tree->Branch("_ze_mc",&_ze_mc,"ze_mc/D");
     _tree->Branch("_rr_max",&_rr_max,"rr_max/D");
+    _tree->Branch("_dmin",&_dmin,"dmin/D");
 
     _tmean._rad = 10;
     
@@ -122,6 +123,8 @@ namespace larlite {
 	_dqdx_v.push_back( dqdx_v[p] );
 	_rr_v.push_back( rr_v[p] );
 
+	_dmin = sqrt( (_ye_rc - _ye_mc)*(_ye_rc - _ye_mc) + (_ze_rc - _ze_mc)*(_ze_rc - _ze_mc) );
+	
 	if (rr_v[p] > _rr_max) { _rr_max = rr_v[p]; }
 
       }// for all points in calorimetry

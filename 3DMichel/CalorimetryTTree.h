@@ -59,6 +59,7 @@ namespace larlite {
     std::vector<double> _rr_v;
     double _xe_rc, _ye_rc, _ze_rc;
     double _xe_mc, _ye_mc, _ze_mc;
+    double _dmin;
     double _rr_max;
 
     TruncMean _tmean;

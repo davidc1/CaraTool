@@ -7,6 +7,7 @@ void TruncMean::CalcTruncMean(const std::vector<double>& rr_v, const std::vector
 			      std::vector<double>& dq_trunc_v)
 {
 
+  // how many points to sample 
   int Nneighbor = (int)(_rad * 3 * 2);
 
   dq_trunc_v.clear();
@@ -48,8 +49,6 @@ void TruncMean::CalcTruncMean(const std::vector<double>& rr_v, const std::vector
     double median = Median(dq_local_v);
     double rms    = RMS(dq_local_v);
 
-    //std::cout << "median = " << median << "\t rms = " << rms << std::endl;
-
     double truncated_dq = 0.;
     int npts = 0;
     for (auto const& dq : dq_local_v) {
@@ -58,8 +57,6 @@ void TruncMean::CalcTruncMean(const std::vector<double>& rr_v, const std::vector
 	npts += 1;
       }
     }
-
-    //std::cout << "adding trunc q = " << truncated_dq << "\t with " << npts << " points" << std::endl;
 
     dq_trunc_v.push_back( truncated_dq / npts );
   }// for all values
