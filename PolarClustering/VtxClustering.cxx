@@ -15,6 +15,7 @@ namespace larlite {
     _fout=0;
     _bin_width = 7.2 / 180. * 3.1415;
     _thresh = 20;
+    _max_vtx_dist = 100;
     // define PI
     PI = 3.1415;
     // geometry, to be used across the module
@@ -47,14 +48,14 @@ namespace larlite {
   
   bool VtxClustering::analyze(storage_manager* storage) {
 
-    // grab hits to be used in clustering
-    auto *ev_hit = storage->get_data<event_hit>(_hit_producer);
+    // grab input clusters to be used in clustering
+    auto *ev_clus_in = storage->get_data<event_cluster>(_cluster_producer);
 
     // grab vtx to be used to guide polar-coordinates
     auto *ev_vtx = storage->get_data<event_vertex>(_vtx_producer);
 
     // grab clusters to be produced
-    auto *ev_clus = storage->get_data<event_cluster>("polar");
+    auto *ev_clus_out = storage->get_data<event_cluster>("polar");
 
     // produce cluster -> hit association
     auto *ev_clus_hit_ass = storage->get_data<event_ass>("polar");
@@ -63,6 +64,16 @@ namespace larlite {
     auto *ev_clus_vtx_ass = storage->get_data<event_ass>("polar");
 
     storage->set_id(storage->run_id(), storage->subrun_id(), storage->event_id());
+
+    // if no input cluster -> continue
+    if ( !ev_clus_in or (ev_clus_in->size() == 0) ){
+      std::cout << "No Input Cluster -> return" << std::endl;
+      return false;
+    }
+
+    // grab hits to be used in clustering
+    larlite::event_hit *ev_hit = nullptr;
+    auto const& ass_cluster_hit_v = storage->find_one_ass(ev_clus_in->id(), ev_hit, ev_clus_in->name());
 
     // if no hits or vertex -> exit
     if ( !ev_hit or (ev_hit->size() == 0) ){
@@ -99,7 +110,7 @@ namespace larlite {
     projectVtx( ev_vtx->at(0) );
 
     // fill polar hit maps
-    fillPolarHitMap(ev_hit);
+    fillPolarHitMap(ass_cluster_hit_v,ev_hit);
 
     // Bin in Polar angles
     PolarBinning();
@@ -123,7 +134,7 @@ namespace larlite {
 	  clus.set_n_hits(polarClusters[i].size());
 	  clus.set_view( _geom->PlaneToView(pl) );
 	  // vector for associations
-	  ev_clus->push_back(clus);
+	  ev_clus_out->push_back(clus);
 	  std::vector<unsigned int> clus_hit_ass;
 	  for (auto const& hitidx : polarClusters[i])
 	    clus_hit_ass.push_back(hitidx);
@@ -133,7 +144,7 @@ namespace larlite {
     }// for all planes
 
     // save cluster -> hit associations
-    ev_clus_hit_ass->set_association(ev_clus->id(),product_id(data::kHit,ev_hit->name()),cluster_hit_ass_v);
+    ev_clus_hit_ass->set_association(ev_clus_out->id(),product_id(data::kHit,ev_hit->name()),cluster_hit_ass_v);
     
     return true;
   }
@@ -211,63 +222,82 @@ namespace larlite {
   
   void VtxClustering::projectVtx(const larlite::vertex vtx){
     
-    std::vector<double> xyz = {vtx.X() + 960 * _t2cm ,vtx.Y(),vtx.Z()};
+    std::vector<double> xyz = {vtx.X(),vtx.Y(),vtx.Z()};
     
     auto const& vtx_U = _geomH->Point_3Dto2D(xyz,0);
     vtx_w_cm[0] = vtx_U.w;
-    vtx_t_cm[0] = vtx_U.t;
+    vtx_t_cm[0] = vtx_U.t + 800 * _t2cm;
 
     auto const& vtx_V = _geomH->Point_3Dto2D(xyz,1);
     vtx_w_cm[1] = vtx_V.w;
-    vtx_t_cm[1] = vtx_V.t;
+    vtx_t_cm[1] = vtx_V.t + 800 * _t2cm;
 
     auto const& vtx_Y = _geomH->Point_3Dto2D(xyz,2);
     vtx_w_cm[2] = vtx_Y.w;
-    vtx_t_cm[2] = vtx_Y.t;
+    vtx_t_cm[2] = vtx_Y.t + 800 * _t2cm;
+
+    std::cout << "Vtx @ [W,T] : " << std::endl
+	      << "Pl 0 [" << vtx_w_cm[0] << ", " << vtx_t_cm[0] << "]" << std::endl
+      	      << "Pl 1 [" << vtx_w_cm[1] << ", " << vtx_t_cm[1] << "]" << std::endl
+      	      << "Pl 2 [" << vtx_w_cm[2] << ", " << vtx_t_cm[2] << "]" << std::endl << std::endl;
+      
 
     return;
   }
 
 
-  void VtxClustering::fillPolarHitMap(const larlite::event_hit *ev_hit){
+  void VtxClustering::fillPolarHitMap(const std::vector<std::vector<unsigned int> > ass_cluster_hit_v,
+				      const larlite::event_hit *ev_hit){
 
-    // loop through hits
-    for (size_t i=0; i < ev_hit->size(); i++){
-      
-      auto const& hit = ev_hit->at(i);
-      
-      // get plane
-      auto const& pl = hit.WireID().Plane;
-      if (pl > _geom->Nplanes()){
-	print (msg::kERROR,__FUNCTION__,"Plane number not valid...");
-	continue;
-      }
-      
-      // get the hit position in polar coordinates
-      double hit_t_cm = hit.PeakTime()    * _t2cm;
-      double hit_w_cm = hit.WireID().Wire * _w2cm;
-      
-      double r = sqrt( (hit_t_cm - vtx_t_cm[pl]) * (hit_t_cm - vtx_t_cm[pl]) +
-		       (hit_w_cm - vtx_w_cm[pl]) * (hit_w_cm - vtx_w_cm[pl]) );
-      
-      double cos_theta = (hit_w_cm - vtx_w_cm[pl]) / r;
-      double sin_theta = (hit_t_cm - vtx_t_cm[pl]) / r;
-      double theta_rad = atan2(sin_theta,cos_theta);
-      
+    // loop through cluster
+    for (auto const& clus_hit_ass : ass_cluster_hit_v){
 
-      // Fill variables for output (debugging/optimizing) tree
-      _angle_v.push_back(theta_rad * 180. / PI);
-      _radius_v.push_back(r);
-      _charge_v.push_back(hit.Integral());
-      _pl_v.push_back(pl);
+      // if there are more than 5 hits in the cluster
+      //if (clus_hit_ass.size() < 5)
+      //continue;
       
+      // loop through hits for this cluster
+      for (auto const& i: clus_hit_ass){
+	
+	auto const& hit = ev_hit->at(i);
+	
+	// get plane
+	auto const& pl = hit.WireID().Plane;
+	if (pl > _geom->Nplanes()){
+	  print (msg::kERROR,__FUNCTION__,"Plane number not valid...");
+	  continue;
+	}
+	
+	// get the hit position in polar coordinates
+	double hit_t_cm = hit.PeakTime()    * _t2cm;
+	double hit_w_cm = hit.WireID().Wire * _w2cm;
+	
+	double r = sqrt( (hit_t_cm - vtx_t_cm[pl]) * (hit_t_cm - vtx_t_cm[pl]) +
+			 (hit_w_cm - vtx_w_cm[pl]) * (hit_w_cm - vtx_w_cm[pl]) );
 
-      // fill map accordingly
-      // 1st index -> plane
-      // 2nd index -> hit index in ev_hit vector
-      _HitMap_v[pl][i] = std::make_pair(r,theta_rad);
-      
-    }// finish loop over hits
+	// ignore any hit that is too far away from the vertexo
+	if (r > _max_vtx_dist)
+	  continue;
+	
+	double cos_theta = (hit_w_cm - vtx_w_cm[pl]) / r;
+	double sin_theta = (hit_t_cm - vtx_t_cm[pl]) / r;
+	double theta_rad = atan2(sin_theta,cos_theta);
+	
+	
+	// Fill variables for output (debugging/optimizing) tree
+	_angle_v.push_back(theta_rad * 180. / PI);
+	_radius_v.push_back(r);
+	_charge_v.push_back(hit.Integral());
+	_pl_v.push_back(pl);
+	
+	
+	// fill map accordingly
+	// 1st index -> plane
+	// 2nd index -> hit index in ev_hit vector
+	_HitMap_v[pl][i] = std::make_pair(r,theta_rad);
+	
+      }// finish loop over hits in the cluster
+    }// finish loop over clusters
 
     _polar_tree->Fill();
 

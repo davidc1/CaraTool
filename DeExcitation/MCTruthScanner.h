@@ -27,13 +27,13 @@ namespace larlite {
   public:
 
     /// Default constructor
-    MCTruthScanner(){ _name="MCTruthScanner"; _fout=0;}
+    MCTruthScanner(){ _name="MCTruthScanner"; _fout=0;_display_mcpart=false;}
 
     /// Default destructor
     virtual ~MCTruthScanner(){}
 
     /** IMPLEMENT in MCTruthScanner.cc!
-        Initialization method to be called before the analysis event loop.
+o        Initialization method to be called before the analysis event loop.
     */ 
     virtual bool initialize();
 
@@ -47,7 +47,18 @@ namespace larlite {
     */
     virtual bool finalize();
 
+    void showAllMCPart(bool on) { _display_mcpart = on; }
+    void setVerbose(bool on) { _verbose = on; }
+
   protected:
+
+    int _neta, _nstable;
+
+    bool _display_mcpart;
+
+    bool _verbose;
+
+    int _entry;
     
   };
 }

@@ -35,5 +35,5 @@ ana = fmwk.CalorimetryTTree()
 my_proc.add_process(ana)
 
 #my_proc.enable_filter(True)
-my_proc.run(0,100)
+my_proc.run()
 sys.exit(0);

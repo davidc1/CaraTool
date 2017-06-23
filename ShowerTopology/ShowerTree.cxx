@@ -41,6 +41,7 @@ namespace larlite {
     _tree->Branch("_ide_shower",&_ide_shower,"ide_shower/D");
     
     _tree->Branch("_photon_edep","std::vector<double>",&_photon_edep);
+    _tree->Branch("_photon_proc","std::vector<string>",&_photon_proc);
     _tree->Branch("_photon_x","std::vector<double>",&_photon_x);
     _tree->Branch("_photon_y","std::vector<double>",&_photon_y);
     _tree->Branch("_photon_z","std::vector<double>",&_photon_z);
@@ -147,6 +148,7 @@ namespace larlite {
       }
 
       _photon_edep.clear();
+      _photon_proc.clear();
       _photon_x.clear();
       _photon_y.clear();
       _photon_z.clear();
@@ -358,8 +360,10 @@ namespace larlite {
       // if 1st generation
       if (prefix == "\t"){
 	// count the photons
-	if (pdg == 22)
+	if ( (pdg == 22) && (proc == "eBrem") ){
 	  _photon_edep.push_back( edep );
+	  _photon_proc.push_back( proc );
+	}
       }
 
       // save info for "charge pockets" produced

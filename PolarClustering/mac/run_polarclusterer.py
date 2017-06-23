@@ -15,7 +15,7 @@ from larlite import larutil
 my_proc = fmwk.ana_processor()
 
 # Set input root file
-for x in xrange(len(sys.argv)-1):
+for x in xrange(len(sys.argv)-2):
     fname = sys.argv[x+1]
     my_proc.add_input_file(fname)
     
@@ -26,28 +26,34 @@ my_proc.set_io_mode(fmwk.storage_manager.kBOTH)
 my_proc.set_ana_output_file("");
 
 # Specify data output root file name
-my_proc.set_output_file("larlite_mcclusters.root")
+my_proc.set_output_file(sys.argv[-1])
 
-my_proc.enable_filter(True)
+# IFF USE FILTER
 
-ana = fmwk.Pi0Filter()
+#my_proc.enable_filter(True)
+#ana = fmwk.Pi0Filter()
 # set the number of pi0s requested
-ana.setNPi0s(1)
-my_proc.add_process(ana)
+#ana.setNPi0s(1)
+#my_proc.add_process(ana)
 
 polar_clusterer = fmwk.VtxClustering()
-polar_clusterer.setHitProducer("gaushit")
-polar_clusterer.setVtxProducer("mcroi")
+#polar_clusterer.setHitProducer("gaushit")
+polar_clusterer.setClusterProducer("sc")
+#polar_clusterer.setVtxProducer("numuCC_vertex")
+polar_clusterer.setVtxProducer("mcvertex")
+polar_clusterer.setMaxVtxDist(100.)
 my_proc.add_process(polar_clusterer)
 
-my_proc.set_data_to_write(fmwk.data.kHit,"gaushit")
+#my_proc.set_data_to_write(fmwk.data.kHit,"gaushit")
+#my_proc.set_data_to_write(fmwk.data.kHit,"shrhits2")
 my_proc.set_data_to_write(fmwk.data.kCluster,"polar")
+#my_proc.set_data_to_write(fmwk.data.kVertex,"numuCC_vertex")
 my_proc.set_data_to_write(fmwk.data.kAssociation,"polar") 
 
 print
 print  "Finished configuring ana_processor. Start event loop!"
 print
 
-my_proc.run()
+my_proc.run(0,100)
 sys.exit()
 

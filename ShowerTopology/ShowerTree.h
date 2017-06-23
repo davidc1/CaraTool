@@ -95,6 +95,7 @@ namespace larlite {
     double _ide_elec, _ide_shower;
     
     std::vector<double> _photon_edep;
+    std::vector<std::string> _photon_proc;
     std::vector<double> _photon_x, _photon_y, _photon_z;
 
     std::vector<double> _electron_energy;

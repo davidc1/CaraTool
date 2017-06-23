@@ -45,6 +45,8 @@ namespace larlite {
 
     void setHitProducer(std::string s) { _hit_producer = s; }
     void setVtxProducer(std::string s) { _vtx_producer = s; }
+    void setClusterProducer(std::string s) { _cluster_producer = s; }
+    void setMaxVtxDist(double d) { _max_vtx_dist = d; }
 
     /**
        @brief Get Polar Hit Map
@@ -74,6 +76,7 @@ namespace larlite {
 
     std::string _hit_producer;
     std::string _vtx_producer;
+    std::string _cluster_producer;
 
 
     /**
@@ -125,7 +128,8 @@ namespace larlite {
        @input larlite event_hit object
        @output per-plane maps  of hit index -> polar coordinate pair 
      */
-    void fillPolarHitMap(const larlite::event_hit *ev_hit);
+    void fillPolarHitMap(const std::vector<std::vector<unsigned int> > ass_cluster_hit_v,
+			 const larlite::event_hit *ev_hit);
 
     /**
        @brief Bin by polar angle the hits in each plane
@@ -137,6 +141,9 @@ namespace larlite {
 
     // threshold for number of hits @ a certain angle to identify a cluster
     size_t _thresh;
+
+    // maximum distance from vertex for hits
+    double _max_vtx_dist;
 
     // Add a Tree on which to save the polar, angular, charge amount per event
     TTree* _polar_tree;
