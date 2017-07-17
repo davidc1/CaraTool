@@ -35,9 +35,9 @@ namespace vx {
   public:
     
     /// Default constructor
-    VoxelizeTracks(){}
+    VoxelizeTracks(){};
 
-    VoxelizeTracks(double step){ _step = step; }
+    VoxelizeTracks(double step);
     
     /// Default destructor
     ~VoxelizeTracks(){}
@@ -47,6 +47,11 @@ namespace vx {
 		   const double& e);
 
     void setVerbose(bool on) { _verbose = on; }
+
+    void getSummary() { std::cout << "energy added : " << _etot << "\t energy voxelized : " << _evox << std::endl; }
+
+    // apply energy threshold
+    double applyThreshold(const double& emin);
     
   private:
     
@@ -63,11 +68,11 @@ namespace vx {
     std::vector< std::pair<double,double> > _volumeBounds;
     
     /// get voxel associated to specific coordinates
-    Voxel getVoxel(const double& x, const double& y, const double& z);
+    Voxel& getVoxel(const double& x, const double& y, const double& z);
     /// get voxel associated to a specific index triplet
-    Voxel getVoxel(const int& i,    const int& j,    const int& k   );
+    Voxel& getVoxel(const int& i,    const int& j,    const int& k   );
     /// get voxel associated to a specific index
-    Voxel getVoxel(const ID& id);
+    Voxel& getVoxel(const ID& id);
     
     /** get list of indermediate voxel IDs between two voxels
 	assume that the voxels must share at least one edge
@@ -81,6 +86,11 @@ namespace vx {
     
     /// geoalgo utility
     ::geoalgo::GeoAlgo _geoAlgo;
+
+    // keep track of total energy added
+    double _etot;
+    // keep track of total energy voxelized
+    double _evox;
     
   };
 
