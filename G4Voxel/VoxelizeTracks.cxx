@@ -5,11 +5,18 @@
 
 namespace vx {
 
-  VoxelizeTracks::VoxelizeTracks(double step) {
-
+  VoxelizeTracks::VoxelizeTracks(double step)
+    : _voxel_tree(nullptr)
+  {
+    
     _step = step;
     
     _etot = _evox = 0;
+    
+    if (_voxel_tree) delete _voxel_tree;
+    _voxel_tree = new TTree("voxel_tree","voxel tree");
+    _voxel_tree->Branch("edep",&_edep,"edep/D");
+    _voxel_tree->Branch("dx",&_dx,"dx/D");
     
   }
   
@@ -184,6 +191,9 @@ namespace vx {
 	  thisVoxel.AddEnergy( e * efrac );
 	  efracadded += efrac;
 	  _evox += (e*efrac);
+	  _edep = e*efrac;
+	  _dx   = points[0].Dist(step.Start());
+	  _voxel_tree->Fill();
 	  addStart = true;
 	}
 
@@ -195,6 +205,9 @@ namespace vx {
 	  thisVoxel.AddEnergy( e * efrac );
 	  efracadded += efrac;
 	  _evox += (e*efrac);
+	  _edep = e*efrac;
+	  _dx   = points[0].Dist(step.End());
+	  _voxel_tree->Fill();
 	  addEnd = true;
 	}
       }// if a single intersection point
@@ -210,6 +223,9 @@ namespace vx {
 	thisVoxel.AddEnergy( e * efrac );
 	efracadded += efrac;
 	_evox += (e*efrac);
+	_edep = e*efrac;
+	_dx   = points[0].Dist(points[1]);
+	_voxel_tree->Fill();
 
 	if (_verbose) {
 	  std::cout << "\t intersection length : " << points[0].Dist(points[1])
@@ -353,36 +369,66 @@ namespace vx {
 
       etotal += voxel.Energy();
 
-      if (voxel.Energy() > emin) { ethresh += voxel.Energy(); }
+      //_edep  = voxel.Energy();
+      //_voxel_tree->Fill();
 
-      else {
-
-	// does a neighbor in x pass the condition?
-	bool neighbor = false;
-
-	// check neighbords in x
-	
-	ID idlow( it->first.geti()-1, it->first.getj(), it->first.getk() );
-	if (_voxelMap.find(idlow) != _voxelMap.end() ) {
-	  if (_voxelMap[idlow].Energy() > emin)
-	    neighbor = true;
-	}
-
-	ID idhigh( it->first.geti()+1, it->first.getj(), it->first.getk() );
-	if (_voxelMap.find(idhigh) != _voxelMap.end() ) {
-	  if (_voxelMap[idhigh].Energy() > emin)
-	    neighbor = true;
-	}
-
-	if (neighbor == true)
+      if (voxel.Energy() > emin)
+	{
 	  ethresh += voxel.Energy();
+	  continue;
+	}
 
-      }// if not above threshold
-	    
+      // if the voxel itself does not have enough energy, check the neighbors
+      
+      // does a neighbor in x pass the condition?
+      bool neighbor = false;
+      
+      // check neighbords in x
+      
+      ID idlowX( it->first.geti()-1, it->first.getj(), it->first.getk() );
+      if (_voxelMap.find(idlowX) != _voxelMap.end() ) {
+	if (_voxelMap[idlowX].Energy() + voxel.Energy() > emin)
+	  neighbor = true;
+      }
+      
+      ID idhighX( it->first.geti()+1, it->first.getj(), it->first.getk() );
+      if (_voxelMap.find(idhighX) != _voxelMap.end() ) {
+	if (_voxelMap[idhighX].Energy() + voxel.Energy() > emin)
+	  neighbor = true;
+      }
+
+      // does a neighbor in y pass the condition?
+      ID idlowY( it->first.geti(), it->first.getj()-1, it->first.getk() );
+      if (_voxelMap.find(idlowY) != _voxelMap.end() ) {
+	if (_voxelMap[idlowY].Energy() + voxel.Energy() > emin)
+	  neighbor = true;
+      }
+      
+      ID idhighY( it->first.geti(), it->first.getj()+1, it->first.getk() );
+      if (_voxelMap.find(idhighY) != _voxelMap.end() ) {
+	if (_voxelMap[idhighY].Energy() + voxel.Energy() > emin)
+	  neighbor = true;
+      }
+      
+      if (neighbor == true) {
+	//std::cout << "neighbor above threshold!" << std::endl;
+	ethresh += voxel.Energy();
+      }
+
     }// for all voxels in event
-
-
+    
+    
     return ethresh/etotal;
+  }
+
+  void VoxelizeTracks::WriteTree() {
+
+    TFile* file = new TFile("voxelize.root","NEW");
+    
+    file->cd();
+    _voxel_tree->Write();
+    file->Close();
+    
   }
 
 }

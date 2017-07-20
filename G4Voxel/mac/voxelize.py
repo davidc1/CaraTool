@@ -39,6 +39,9 @@ for line in fin:
 print ana.getSummary()
 
 print '@ 0.1 MeV threshold recover : %.02f of energy'%ana.applyThreshold(0.1)
+
+ana.WriteTree()
+
 print '@ 0.5 MeV threshold recover : %.02f of energy'%ana.applyThreshold(0.5)
 print '@ 1.0 MeV threshold recover : %.02f of energy'%ana.applyThreshold(1.0)
     

@@ -22,6 +22,9 @@
 #include "Voxel.h"
 #include "ID.h"
 
+#include "TTree.h"
+#include "TFile.h"
+
 /**
    \class VoxelizeTracks
    User defined class VoxelizeTracks ... these comments are used to generate
@@ -52,6 +55,8 @@ namespace vx {
 
     // apply energy threshold
     double applyThreshold(const double& emin);
+
+    void WriteTree();
     
   private:
     
@@ -91,6 +96,10 @@ namespace vx {
     double _etot;
     // keep track of total energy voxelized
     double _evox;
+
+    TTree *_voxel_tree;
+    double _edep;
+    double _dx;
     
   };
 

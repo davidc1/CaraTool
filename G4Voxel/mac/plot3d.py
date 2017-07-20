@@ -28,6 +28,9 @@ for line in fin:
 
     ID   = int(words[0])
     edep = float(words[1])
+
+    if (edep == 0): continue
+    
     xpos0 = float(words[2])
     ypos0 = float(words[3])
     zpos0 = float(words[4])
