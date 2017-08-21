@@ -20,7 +20,7 @@ endif
 #
 # Define directories to be compile upon a global "make"...
 #
-SUBDIRS := Playground PolarClustering ShowerTopology 3DMichel G4Voxel #ADD_NEW_SUBDIR ... do not remove this comment from this line
+SUBDIRS := Playground PolarClustering ShowerTopology 3DMichel G4Voxel Spallation #ADD_NEW_SUBDIR ... do not remove this comment from this line
 
 #####################################################################################
 #
