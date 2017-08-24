@@ -1,7 +1,7 @@
-#ifndef LARLITE_RADIALDIST_CXX
-#define LARLITE_RADIALDIST_CXX
+#ifndef LARLITE_COVERAGE_CXX
+#define LARLITE_COVERAGE_CXX
 
-#include "RadialDist.h"
+#include "Coverage.h"
 
 #include "LArUtil/GeometryHelper.h"
 #include "LArUtil/Geometry.h"
@@ -12,7 +12,7 @@
 
 namespace larlite {
 
-  bool RadialDist::initialize() {
+  bool Coverage::initialize() {
 
     if (_tree) {delete _tree;}
     _tree = new TTree("tree","tree");
@@ -30,7 +30,7 @@ namespace larlite {
     return true;
   }
   
-  bool RadialDist::analyze(storage_manager* storage) {
+  bool Coverage::analyze(storage_manager* storage) {
 
     auto geom = larutil::Geometry::GetME();
     auto geoH = larutil::GeometryHelper::GetME();
@@ -42,9 +42,6 @@ namespace larlite {
     geom->PlaneOriginVtx(2,origin);
 
     auto ev_trk  = storage->get_data<event_track>("pandoraCosmic");
-    auto ev_clus = storage->get_data<event_cluster>("spallation");
-    larlite::event_hit *ev_hit = nullptr;
-    auto ass_clus_hit_v = storage->find_one_ass(ev_clus->id(),ev_hit, ev_clus->name());
 
     // loop through all tracks and
     for (size_t t=0; t < ev_trk->size(); t++) {
@@ -75,68 +72,25 @@ namespace larlite {
       
     }// for all tracks
 
-    // loop through all clusters and find their COM
-    for (size_t c=0; c < ev_clus->size(); c++) {
+    // scan all points in TPC and measure rhit for each
 
-      // grab associated hits
-      auto const& hit_idx_v = ass_clus_hit_v.at(c);
+    for(int w=10; w < 93; w++) {
+      for (int t=10; t < 25; t++) {
 
-      if (hit_idx_v.size() == 0) continue;
-      if (ev_hit->at(hit_idx_v[0]).WireID().Plane != 2) continue;
-
-      // position
-      double comW = 0;
-      double comT = 0;
-
-      // charge
-      double Q = 0;
-
-      for (auto const& hit_idx : hit_idx_v) {
-
-	auto const& hit = ev_hit->at(hit_idx);
-
-	comW += hit.WireID().Wire * _w2cm;
-	comT += hit.PeakTime()    * _t2cm;
-
-	Q += hit.Integral();
+	_w = w * 10;
+	_t = t * 10;
 	
-      }
+	_rhit = R(_w,_t).first;
 
-      comW /= hit_idx_v.size();
-      comT /= hit_idx_v.size();
+	_tree->Fill();
 
-      _w = comW;
-      _t = comT;
-
-      // find 2D track weighted R
-      auto rinfo = R(comW,comT);
-      _r    = rinfo.first.first;
-      _rsum = rinfo.first.second;
-      // index of closest track
-      auto trkidx = rinfo.second;
-      // grab closest track and figure out distance of nearest hit
-      _rhit = 1e6;
-      auto const& trk2D = _trk2D_v.at(trkidx);
-      for (auto const& pt : trk2D) {
-	for (auto const& hit_idx : hit_idx_v) {
-	  auto const& hit = ev_hit->at(hit_idx);
-	  auto const& hw = hit.WireID().Wire * _w2cm;
-	  auto const& ht = hit.PeakTime() * _t2cm;
-	  double dd = (hw - pt.first) * (hw - pt.first) + (hw - pt.first) * (hw - pt.first);
-	  if (dd < _rhit) { _rhit = dd; }
-	}// for all hits in cluster
-      }// for all points in track
-      _rhit = sqrt(_rhit);
-
-      _q = Q;
-      _tree->Fill();
+      }// for all times
+    }// for all wires
       
-    }// for all clusters
-  
     return true;
   }
 
-  bool RadialDist::finalize() {
+  bool Coverage::finalize() {
 
     _tree->Write();
 
@@ -144,16 +98,13 @@ namespace larlite {
   }
 
 
-  std::pair< std::pair<double,double>, size_t> RadialDist::R(const double& comW, const double& comT) {
+  std::pair<double,double> Coverage::R(const double& comW, const double& comT) {
 
     //std::cout << "COM : " << comW << ", " << comT << std::endl;
 
     double Rtot = 0.;
 
     double Rmin = 1e6;
-
-    // index of nearest track
-    size_t ntrk;
 
     for (size_t t=0; t < _trk2D_v.size(); t++) {
       
@@ -173,14 +124,14 @@ namespace larlite {
 
       Rtot += 1. / sqrt(ddmin);
 
-      if (sqrt(ddmin) < Rmin) { Rmin = sqrt(ddmin); ntrk = t; }
+      if (sqrt(ddmin) < Rmin) { Rmin = sqrt(ddmin); }
       
     }// for all 2D tracks
 
     //std::cout << "Rmin = " << Rmin << std::endl;
     //std::cout << "effective dist : " << 1./Rtot << std::endl;
 
-    return std::make_pair( std::make_pair(Rmin,1./Rtot), ntrk);
+    return std::make_pair(Rmin,1./Rtot);
   }
 
 }

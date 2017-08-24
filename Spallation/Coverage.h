@@ -1,9 +1,9 @@
 /**
- * \file RadialDist.h
+ * \file Coverage.h
  *
  * \ingroup Spallation
  * 
- * \brief Class def header for a class RadialDist
+ * \brief Class def header for a class Coverage
  *
  * @author david
  */
@@ -12,8 +12,8 @@
 
     @{*/
 
-#ifndef LARLITE_RADIALDIST_H
-#define LARLITE_RADIALDIST_H
+#ifndef LARLITE_COVERAGE_H
+#define LARLITE_COVERAGE_H
 
 #include "Analysis/ana_base.h"
 
@@ -21,32 +21,32 @@
 
 namespace larlite {
   /**
-     \class RadialDist
+     \class Coverage
      User custom analysis class made by SHELL_USER_NAME
    */
-  class RadialDist : public ana_base{
+  class Coverage : public ana_base{
   
   public:
 
     /// Default constructor
-    RadialDist()
+    Coverage()
       : _tree(nullptr)
-      { _name="RadialDist"; _fout=0;}
+      { _name="Coverage"; _fout=0;}
 
     /// Default destructor
-    virtual ~RadialDist(){}
+    virtual ~Coverage(){}
 
-    /** IMPLEMENT in RadialDist.cc!
+    /** IMPLEMENT in Coverage.cc!
         Initialization method to be called before the analysis event loop.
     */ 
     virtual bool initialize();
 
-    /** IMPLEMENT in RadialDist.cc! 
+    /** IMPLEMENT in Coverage.cc! 
         Analyze a data event-by-event  
     */
     virtual bool analyze(storage_manager* storage);
 
-    /** IMPLEMENT in RadialDist.cc! 
+    /** IMPLEMENT in Coverage.cc! 
         Finalize method to be called after all events processed.
     */
     virtual bool finalize();
@@ -56,7 +56,7 @@ namespace larlite {
     // vector storing all 3D track 2D projected trajectories
     std::vector < std::vector< std::pair<double,double> > > _trk2D_v;
 
-    std::pair< std::pair<double,double>, size_t> R(const double& comW, const double& comT);
+    std::pair<double,double> R(const double& comW, const double& comT);
 
     double _t2cm, _w2cm;
 

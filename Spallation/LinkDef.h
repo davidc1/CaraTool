@@ -11,6 +11,7 @@
 
 #pragma link C++ class larlite::FilterCosmicTracks+;
 #pragma link C++ class larlite::RadialDist+;
+#pragma link C++ class larlite::Coverage+;
 //ADD_NEW_CLASS ... do not change this line
 #endif
 
