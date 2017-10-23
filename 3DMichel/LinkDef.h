@@ -12,7 +12,9 @@
 #pragma link C++ class larlite::CalorimetryTTree+;
 #pragma link C++ class larlite::CosmicMichel+;
 #pragma link C++ class TruncMean+;
+#pragma link C++ class larlite::IsolatedEndPoint+;
 //ADD_NEW_CLASS ... do not change this line
 #endif
+
 
 
