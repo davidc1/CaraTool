@@ -9,6 +9,7 @@
 
 #include "LArUtil/GeometryHelper.h"
 #include "LArUtil/Geometry.h"
+#include "LArUtil/SpaceChargeMicroBooNE.h"
 
 
 namespace larlite {
@@ -40,6 +41,8 @@ namespace larlite {
 
     auto trk_hit_ass = storage->find_one_ass(ev_trk->id(),ev_hit,ev_trk->name());
 
+    auto SCE = larutil::SpaceChargeMicroBooNE();
+
     // no associated hits? somthing qent wrong
     if (!ev_hit or (ev_hit->size() == 0)){
       print(larlite::msg::kWARNING,__FUNCTION__,"no hits associated to tracks...");
@@ -54,7 +57,11 @@ namespace larlite {
 	if (mct.size() == 0) continue;
 	auto end = mct.at(mct.size()-1);
 	std::vector<double> endpt{end.X(),end.Y(),end.Z()};
-	mu_end_pt_v.push_back( endpt );
+	auto endptSCE = SCE.GetPosOffsets(endpt[0],endpt[1],endpt[2]);
+	endptSCE[0] += endpt[0];
+	endptSCE[1] += endpt[1];
+	endptSCE[2] += endpt[2];
+	mu_end_pt_v.push_back( endptSCE );
 	}// if in FV
       }// if muon
     
@@ -86,8 +93,6 @@ namespace larlite {
       
     }
 
-    std::cout << "LEN : " << _hitmap[std::make_pair(20,101)].size() << std::endl;
-
     // done storing hits in easy to retrieve map
 
     // start looping through reconstructed tracks
@@ -110,8 +115,6 @@ namespace larlite {
 
       // grab hits associated to this track
       auto const& ass_hit_v = trk_hit_ass.at(t);
-
-      std::cout << "track end-point @ " << endt << ", " << endw << std::endl;
 
       std::vector<int> nearbyhit_v;
       double nearbyhit_q;
@@ -146,11 +149,13 @@ namespace larlite {
 	double dd = sqrt( (endpt.Y() - mcendpt[1])*(endpt.Y() - mcendpt[1]) + (endpt.Z() - mcendpt[2])*(endpt.Z() - mcendpt[2]) );
 	if (dd < ddmin) { ddmin = dd; }
       }// for all MC tracks
-      
+
+      /*
       std::cout << "end hit position : " << pt.w << ", " << pt.t << std::endl;
       std::cout << "there are " << nearbyhit_v.size() << " hits near this point" << std::endl;
       std::cout << "nearest track end point : " << ddmin << std::endl;
       std::cout << std::endl;
+      */
 
       _x = endpt.X();
       _y = endpt.Y();
