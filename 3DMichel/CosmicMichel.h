@@ -18,6 +18,8 @@
 #include "Analysis/ana_base.h"
 #include "TTree.h"
 #include "TruncMean.h"
+#include "DataFormat/hit.h"
+#include "TVector3.h"
 
 namespace larlite {
   /**
@@ -63,6 +65,7 @@ namespace larlite {
     double _xe_rc, _ye_rc, _ze_rc;
     double _dmin;
     double _rr_max;
+    double _qnear;
 
     TTree *_tree_mc;
     double _xe_mc, _ye_mc, _ze_mc;
@@ -71,6 +74,14 @@ namespace larlite {
     TruncMean _tmean;
 
     bool _truth;
+
+    double _w2cm, _t2cm;
+
+    // create a map which connects position (x,z) in 10-cm blocks to hit index
+    std::map< std::pair<int,int>,std::vector<int> > _hitmap;
+    void ResetHitMap(larlite::event_hit* ev_hit);
+    // find charge near end of track not belonging to track
+    double Qtot(const double& rmax, const TVector3& end, const std::vector<unsigned int>& ass_hit_v, larlite::event_hit* ev_hit);
     
   };
 }

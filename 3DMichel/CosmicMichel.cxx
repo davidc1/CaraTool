@@ -9,10 +9,14 @@
 #include "TruncMean.h"
 
 #include "LArUtil/SpaceChargeMicroBooNE.h"
+#include "LArUtil/GeometryHelper.h"
 
 namespace larlite {
 
   bool CosmicMichel::initialize() {
+
+    _w2cm  = larutil::GeometryHelper::GetME()->WireToCm();
+    _t2cm  = larutil::GeometryHelper::GetME()->TimeToCm();
 
     if (_tree_rc) delete _tree_rc;
     _tree_rc = new TTree("rctree","rctree");
@@ -30,6 +34,7 @@ namespace larlite {
     _tree_rc->Branch("_ze_mc",&_ze_mc,"ze_mc/D");
     _tree_rc->Branch("_dmin",&_dmin,"dmin/D");
     _tree_rc->Branch("_rr_max",&_rr_max,"rr_max/D");
+    _tree_rc->Branch("_qnear",&_qnear,"qnear/D");
     
     // mc tree
     if (_tree_mc) delete _tree_mc;
@@ -55,6 +60,38 @@ namespace larlite {
 
     // load mctracks
     auto ev_mct = storage->get_data<event_mctrack>("mcreco");
+
+    // load hits
+    larlite::event_hit* ev_hit;
+    auto trk_hit_ass = storage->find_one_ass(ev_trk->id(),ev_hit,ev_trk->name());
+
+    // no associated hits? somthing went wrong
+    if (!ev_hit or (ev_hit->size() == 0)){
+      print(larlite::msg::kWARNING,__FUNCTION__,"no hits associated to tracks...");
+      return true;
+    }
+
+    // split hits in cells 10x10 cm to easily locate them
+    ResetHitMap(ev_hit);
+
+    // done creating hit map
+    
+    for (size_t h=0; h < ev_hit->size(); h++) {
+
+      auto const& hit = ev_hit->at(h);
+
+      // only Y-plane
+      if (hit.WireID().Plane != 2) continue;
+      
+      auto wcm = hit.WireID().Wire * _w2cm;
+      auto tcm = hit.PeakTime() * _t2cm;
+
+      auto pos = std::make_pair((int)tcm/10,(int)wcm/10);
+
+      _hitmap[pos].push_back( h );
+      
+    }
+
 
     std::vector< std::vector<double> > mu_end_pt_v;
 
@@ -109,12 +146,15 @@ namespace larlite {
       // grab the associated track
       if (calo_trk_ass.at(i).size() != 1) continue;
 
-      auto trk = ev_trk->at( calo_trk_ass.at(i).at(0) );
+      auto trkidx = calo_trk_ass.at(i).at(0);
+      auto trk = ev_trk->at( trkidx );
 
       _xe_rc = trk.End().X();
       _ye_rc = trk.End().Y();
       _ze_rc = trk.End().Z();
 
+      _qnear = Qtot(5.,trk.End(),trk_hit_ass[trkidx],ev_hit);
+      
       // find the closest true muon end-point
       double ddmin = 100000.;
       int idxmin = 0;
@@ -183,6 +223,75 @@ namespace larlite {
     }
     
     return true;
+  }
+
+  void CosmicMichel::ResetHitMap(larlite::event_hit* ev_hit) {
+
+    _hitmap.clear();
+    
+    for (int i=-10; i < 35; i++){
+      for (int k=-1; k < (int)(1036./10.)+1; k++){
+	auto pos = std::make_pair(i,k);
+	_hitmap[pos] = std::vector<int>();
+      }
+    }
+    
+    for (size_t h=0; h < ev_hit->size(); h++) {
+
+      auto const& hit = ev_hit->at(h);
+
+      // only Y-plane
+      if (hit.WireID().Plane != 2) continue;
+      
+      auto wcm = hit.WireID().Wire * _w2cm;
+      auto tcm = hit.PeakTime() * _t2cm;
+
+      auto pos = std::make_pair((int)tcm/10,(int)wcm/10);
+
+      _hitmap[pos].push_back( h );
+      
+    }
+
+    return;
+  }
+
+  double CosmicMichel::Qtot(const double& rmax,
+			    const TVector3& end,
+			    const std::vector<unsigned int>& ass_hit_v,
+			    larlite::event_hit* ev_hit) {
+
+    double qtot = 0;
+
+    auto geoH = larutil::GeometryHelper::GetME();
+
+    auto const& pt = geoH->Point_3Dto2D(end,2);
+    
+    int endw = pt.w/10;
+    int endt = (pt.t + 800 * _t2cm)/10;
+    
+    // grab points nearby
+    for (int i = endw-1; i <= endw+1; i++) {
+      for (int j = endt-1; j <= endt+1; j++) {
+	auto endpos = std::make_pair(j,i);
+	auto const& hits = _hitmap[endpos];
+	for (auto const& hit_idx : hits) {
+	  // if hit index associated to track -> skip
+	  bool trackhit = false;
+	  for (auto const& idx : ass_hit_v){
+	    if (idx == hit_idx) { trackhit = true; break; }
+	  }
+	  if (trackhit == true) continue;
+	  auto const& hit = ev_hit->at(hit_idx);
+	  auto wcm = hit.WireID().Wire * _w2cm;
+	  auto tcm = hit.PeakTime() * _t2cm;
+	  double d = sqrt ( (wcm - pt.w) * (wcm-pt.w) + (tcm - pt.t - 800*_t2cm) * (tcm - pt.t - 800*_t2cm) );
+	  if (d < 5.) { qtot += hit.Integral(); }
+	}// for all hits in cell
+      }// for all time cells
+    }// for all wire cells
+
+    return qtot;
+    
   }
 
 }
