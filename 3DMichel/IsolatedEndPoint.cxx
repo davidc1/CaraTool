@@ -117,7 +117,7 @@ namespace larlite {
       auto const& ass_hit_v = trk_hit_ass.at(t);
 
       std::vector<int> nearbyhit_v;
-      double nearbyhit_q;
+      double nearbyhit_q = 0;
       
       // grab points nearby
       for (int i = endw-1; i <= endw+1; i++) {

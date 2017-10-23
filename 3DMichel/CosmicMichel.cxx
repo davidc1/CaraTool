@@ -8,6 +8,8 @@
 #include "DataFormat/mctrack.h"
 #include "TruncMean.h"
 
+#include "LArUtil/SpaceChargeMicroBooNE.h"
+
 namespace larlite {
 
   bool CosmicMichel::initialize() {
@@ -54,33 +56,43 @@ namespace larlite {
     // load mctracks
     auto ev_mct = storage->get_data<event_mctrack>("mcreco");
 
-    // grab the muon (assume single-particle in TPC stopping sample)
-    if (!ev_mct or (ev_mct->size() == 0)){
-      print(larlite::msg::kWARNING,__FUNCTION__,"no MCTracks");
-      return true;
-    }
-
     std::vector< std::vector<double> > mu_end_pt_v;
 
-    for (size_t i=0; i < ev_mct->size(); i++) {
-      auto mct = ev_mct->at(i);
-      if ( (mct.PdgCode() == 13) or (mct.PdgCode() == -13) ) {
-	if (mct.size() == 0) continue;
-	auto enter = mct.at(0);
-	_energy_mc = enter.E();
-	auto end = mct.End();
-	if (end.E() > 106.) continue;
-	_xe_mc = end.X();
-	_ye_mc = end.Y();
-	_ze_mc = end.Z();
-	if ( (_xe_mc < 256.) and (_xe_mc > 0) and (_ye_mc < 116.) and
-	     (_ye_mc > -116.) and (_ze_mc < 1036.) and (_ze_mc > 0.) ) {
-	  std::vector<double> endpt{_xe_mc,_ye_mc,_ze_mc};
-	  mu_end_pt_v.push_back( endpt );
-	  _tree_mc->Fill();
-	}// if in FV
-      }// if muon
-    }
+    auto SCE = larutil::SpaceChargeMicroBooNE();
+
+    if (_truth) {
+
+      // grab the muon (assume single-particle in TPC stopping sample)
+      if (!ev_mct or (ev_mct->size() == 0)){
+	print(larlite::msg::kWARNING,__FUNCTION__,"no MCTracks");
+	return true;
+      }
+      
+      for (size_t i=0; i < ev_mct->size(); i++) {
+	auto mct = ev_mct->at(i);
+	if ( (mct.PdgCode() == 13) or (mct.PdgCode() == -13) ) {
+	  if (mct.size() == 0) continue;
+	  auto enter = mct.at(0);
+	  _energy_mc = enter.E();
+	  auto end = mct.End();
+	  if (end.E() > 106.) continue;
+	  _xe_mc = end.X();
+	  _ye_mc = end.Y();
+	  _ze_mc = end.Z();
+	  if ( (_xe_mc < 256.) and (_xe_mc > 0) and (_ye_mc < 116.) and
+	       (_ye_mc > -116.) and (_ze_mc < 1036.) and (_ze_mc > 0.) ) {
+	    std::vector<double> endpt{_xe_mc,_ye_mc,_ze_mc};
+	    auto endptSCE = SCE.GetPosOffsets(endpt[0],endpt[1],endpt[2]);
+	    endptSCE[0] += endpt[0];
+	    endptSCE[1] += endpt[1];
+	    endptSCE[2] += endpt[2];
+	    mu_end_pt_v.push_back( endptSCE );
+	    _tree_mc->Fill();
+	  }// if in FV
+	}// if muon
+      }
+
+    } // if use truth
 
     if (!ev_trk or (ev_trk->size() == 0)){
       print(larlite::msg::kWARNING,__FUNCTION__,"no tracks");
@@ -114,16 +126,16 @@ namespace larlite {
 	if (dd < ddmin) { ddmin = dd; idxmin = k; _dmin = sqrt(dd); }
       }// for all MC tracks
 
-      if (ddmin == 100000.) continue;
-      
-      _xe_mc = mu_end_pt_v[idxmin][0];
-      _ye_mc = mu_end_pt_v[idxmin][1];
-      _ze_mc = mu_end_pt_v[idxmin][2];
+      if (ddmin < 100000.) {
+	_xe_mc = mu_end_pt_v[idxmin][0];
+	_ye_mc = mu_end_pt_v[idxmin][1];
+	_ze_mc = mu_end_pt_v[idxmin][2];
+      }
 
       auto dqdx_v  = calo.dQdx();
       auto xyz_v   = calo.XYZ();
       auto rr_v    = calo.ResidualRange();
-      
+
       _x_v.clear();
       _y_v.clear();
       _z_v.clear();
@@ -156,7 +168,7 @@ namespace larlite {
 
       _tmean.CalcTruncMean(_rr_v,_dqdx_v,_dqdx_trunc_v);
       _tree_rc->Fill();
-      
+
     }// for all calo objects
     
     return true;

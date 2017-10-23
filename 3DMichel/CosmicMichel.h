@@ -52,6 +52,8 @@ namespace larlite {
     */
     virtual bool finalize();
 
+    void useTruth(bool on) { _truth = on; }
+
   protected:
 
     TTree *_tree_rc;
@@ -67,6 +69,8 @@ namespace larlite {
     double _energy_mc;
 
     TruncMean _tmean;
+
+    bool _truth;
     
   };
 }
