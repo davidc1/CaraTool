@@ -6,6 +6,7 @@
 #include "DataFormat/hit.h"
 #include "DataFormat/track.h"
 #include "DataFormat/mctrack.h"
+#include "DataFormat/opflash.h"
 #include "TruncMean.h"
 
 #include "LArUtil/SpaceChargeMicroBooNE.h"
@@ -20,19 +21,26 @@ namespace larlite {
 
     if (_tree_rc) delete _tree_rc;
     _tree_rc = new TTree("rctree","rctree");
-    _tree_rc->Branch("_dqdx_v","std::vector<double>",&_dqdx_v);
-    _tree_rc->Branch("_dqdx_trunc_v","std::vector<double>",&_dqdx_trunc_v);
-    _tree_rc->Branch("_x_v","std::vector<double>",&_x_v);
-    _tree_rc->Branch("_y_v","std::vector<double>",&_y_v);
-    _tree_rc->Branch("_z_v","std::vector<double>",&_z_v);
-    _tree_rc->Branch("_rr_v","std::vector<double>",&_rr_v);
+    _tree_rc->Branch("_dqdx_v","std::vector<float>",&_dqdx_v);
+    _tree_rc->Branch("_dqdx_trunc_v","std::vector<float>",&_dqdx_trunc_v);
+    //_tree_rc->Branch("_x_v","std::vector<double>",&_x_v);
+    //_tree_rc->Branch("_y_v","std::vector<double>",&_y_v);
+    //_tree_rc->Branch("_z_v","std::vector<double>",&_z_v);
+    _tree_rc->Branch("_rr_v","std::vector<float>",&_rr_v);
     _tree_rc->Branch("_xe_rc",&_xe_rc,"xe_rc/D");
     _tree_rc->Branch("_ye_rc",&_ye_rc,"ye_rc/D");
     _tree_rc->Branch("_ze_rc",&_ze_rc,"ze_rc/D");
+    _tree_rc->Branch("_xs_rc",&_xs_rc,"xs_rc/D");
+    _tree_rc->Branch("_ys_rc",&_ys_rc,"ys_rc/D");
+    _tree_rc->Branch("_zs_rc",&_zs_rc,"zs_rc/D");
+    _tree_rc->Branch("_px",&_px,"px/D");
+    _tree_rc->Branch("_py",&_py,"py/D");
+    _tree_rc->Branch("_pz",&_pz,"pz/D");
     _tree_rc->Branch("_xe_mc",&_xe_mc,"xe_mc/D");
     _tree_rc->Branch("_ye_mc",&_ye_mc,"ye_mc/D");
     _tree_rc->Branch("_ze_mc",&_ze_mc,"ze_mc/D");
     _tree_rc->Branch("_dmin",&_dmin,"dmin/D");
+    _tree_rc->Branch("_tmin",&_tmin,"tmin/D");
     _tree_rc->Branch("_rr_max",&_rr_max,"rr_max/D");
     _tree_rc->Branch("_qnear",&_qnear,"qnear/D");
     
@@ -51,23 +59,33 @@ namespace larlite {
   
   bool CosmicMichel::analyze(storage_manager* storage) {
 
-    // start by grabbing the calorimetry
-    auto ev_calo = storage->get_data<event_calorimetry>("pandoraCosmiccalo");
-
-    // grab associated track
-    larlite::event_track* ev_trk;
-    auto calo_trk_ass = storage->find_one_ass(ev_calo->id(),ev_trk,ev_calo->name());
-
     // load mctracks
     auto ev_mct = storage->get_data<event_mctrack>("mcreco");
 
+    // start by grabbing the calorimetry
+    auto ev_calo = storage->get_data<event_calorimetry>("pandoraCosmiccalo");
+    
+    // grab flash
+    auto ev_flash = storage->get_data<event_opflash>("simpleFlashCosmic");
+
+    // grab associated track
+    larlite::event_track* ev_trk = nullptr;
+    auto calo_trk_ass = storage->find_one_ass(ev_calo->id(),ev_trk,ev_calo->name());
+
+    // no associated tracks? somthing went wrong
+    if (!ev_trk or (ev_trk->size() == 0)){
+      print(larlite::msg::kWARNING,__FUNCTION__,"no tracks associated to calo...");
+      return true;
+    }
+
+    /*
     // load hits
-    larlite::event_hit* ev_hit;
+    larlite::event_hit* ev_hit = nullptr;
     auto trk_hit_ass = storage->find_one_ass(ev_trk->id(),ev_hit,ev_trk->name());
 
     // no associated hits? somthing went wrong
     if (!ev_hit or (ev_hit->size() == 0)){
-      print(larlite::msg::kWARNING,__FUNCTION__,"no hits associated to tracks...");
+      print(larlite::msg::kWARNING,__FUNCTION__,"no hits associated to track...");
       return true;
     }
 
@@ -91,7 +109,8 @@ namespace larlite {
       _hitmap[pos].push_back( h );
       
     }
-
+    */
+    
 
     std::vector< std::vector<double> > mu_end_pt_v;
 
@@ -149,11 +168,32 @@ namespace larlite {
       auto trkidx = calo_trk_ass.at(i).at(0);
       auto trk = ev_trk->at( trkidx );
 
+      // closest flash time:
+      _tmin = 10000.;
+      for (size_t f=0; f < ev_flash->size(); f++) {
+	auto const& flash = ev_flash->at(f);
+	//if (flash.TotalPE() < 20) continue;
+	double ttrk = fabs(trk.End().X() / 0.1114 - flash.Time());
+	if (ttrk < _tmin) _tmin = ttrk;
+	ttrk = fabs((trk.End().X()-256.) / 0.1114 - flash.Time());
+	if (ttrk < _tmin) _tmin = ttrk;
+      }
+
+
+      if (trk.Length() < 150.) continue;
+
       _xe_rc = trk.End().X();
       _ye_rc = trk.End().Y();
       _ze_rc = trk.End().Z();
+      _xs_rc = trk.Vertex().X();
+      _ys_rc = trk.Vertex().Y();
+      _zs_rc = trk.Vertex().Z();
+      double mag = sqrt( (_ze_rc-_zs_rc)*(_ze_rc-_zs_rc) + (_ye_rc-_ys_rc)*(_ye_rc-_ys_rc) + (_xe_rc-_xs_rc)*(_xe_rc-_xs_rc) );
+      _px = (_xe_rc - _xs_rc) / mag;
+      _py = (_ye_rc - _ys_rc) / mag;
+      _pz = (_ze_rc - _zs_rc) / mag;
 
-      _qnear = Qtot(5.,trk.End(),trk_hit_ass[trkidx],ev_hit);
+      _qnear = 0;//Qtot(5.,trk.End(),trk_hit_ass[trkidx],ev_hit);
       
       // find the closest true muon end-point
       double ddmin = 100000.;

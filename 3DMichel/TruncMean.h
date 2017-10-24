@@ -46,11 +46,11 @@ public:
      2) the subset of local dq values within the range [median-rms, median+rms] is selected.
      3) the resulting local truncated dq is the average of this truncated subset.
    */
-  void CalcTruncMean(const std::vector<double>& rr_v, const std::vector<double>& dq_v,
-		     std::vector<double>& dq_trunc_v);
+  void CalcTruncMean(const std::vector<float>& rr_v, const std::vector<float>& dq_v,
+		     std::vector<float>& dq_trunc_v);
 
-  double Median(const std::vector<double>& v);
-  double RMS(const std::vector<double>& v);
+  float Median(const std::vector<float>& v);
+  float RMS(const std::vector<float>& v);
 
   double _rad;
 

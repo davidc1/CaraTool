@@ -60,10 +60,13 @@ namespace larlite {
 
     TTree *_tree_rc;
     std::vector<double> _x_v, _y_v, _z_v;
-    std::vector<double> _dqdx_v, _dqdx_trunc_v;
-    std::vector<double> _rr_v;
+    std::vector<float> _dqdx_v, _dqdx_trunc_v;
+    std::vector<float> _rr_v;
     double _xe_rc, _ye_rc, _ze_rc;
-    double _dmin;
+    double _xs_rc, _ys_rc, _zs_rc;
+    double _px, _py, _pz;
+    double _dmin; // distance to nearest true muon end point (2D)
+    double _tmin; // time to closest flash
     double _rr_max;
     double _qnear;
 
