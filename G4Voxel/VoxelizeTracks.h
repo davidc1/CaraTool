@@ -41,6 +41,8 @@ namespace vx {
     VoxelizeTracks(){};
 
     VoxelizeTracks(double step);
+
+    VoxelizeTracks(double step, double dmax);
     
     /// Default destructor
     ~VoxelizeTracks(){}
@@ -56,7 +58,20 @@ namespace vx {
     // apply energy threshold
     double applyThreshold(const double& emin);
 
+    // cluster based on angle and radius
+    double Cluster(const double& angle, const double& radius);
+
+    // get dEdx @ shower trunk
+    double dEdx(const double& dist);
+
     void WriteTree();
+
+    void Clear();
+    
+    // set start point
+    void SetStart(const double& x, const double& y, const double& z);
+
+    double TotalEnergy() { return _etot; }
     
   private:
     
@@ -68,9 +83,6 @@ namespace vx {
 
     // boolean for verbosity
     bool _verbose;
-    
-    // volume bounds
-    std::vector< std::pair<double,double> > _volumeBounds;
     
     /// get voxel associated to specific coordinates
     Voxel& getVoxel(const double& x, const double& y, const double& z);
@@ -96,10 +108,17 @@ namespace vx {
     double _etot;
     // keep track of total energy voxelized
     double _evox;
+    
+    // keep track of 1st point
+    bool _first;
+    double _xstart, _ystart, _zstart;
+    // max distance to voxelize for
+    double _dmaxsq;
 
     TTree *_voxel_tree;
     double _edep;
     double _dx;
+    int    _evt;
     
   };
 

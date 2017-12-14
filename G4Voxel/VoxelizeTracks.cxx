@@ -3,20 +3,38 @@
 
 #include "VoxelizeTracks.h"
 
+#include <cmath>
+
 namespace vx {
+
+  VoxelizeTracks::VoxelizeTracks(double step, double dmax)
+    : VoxelizeTracks(step) 
+  {
+    
+    _dmaxsq = dmax*dmax;
+
+  }
 
   VoxelizeTracks::VoxelizeTracks(double step)
     : _voxel_tree(nullptr)
   {
     
     _step = step;
-    
     _etot = _evox = 0;
+    _evt  = 0;
+    _dmaxsq = 0;
+
+    _first = true;
+
+    _xstart = 0;//x0;
+    _ystart = 0;//y0;
+    _zstart = 0;//z0;
     
     if (_voxel_tree) delete _voxel_tree;
     _voxel_tree = new TTree("voxel_tree","voxel tree");
     _voxel_tree->Branch("edep",&_edep,"edep/D");
     _voxel_tree->Branch("dx",&_dx,"dx/D");
+    _voxel_tree->Branch("evt",&_evt,"evt/I");
     
   }
   
@@ -25,9 +43,18 @@ namespace vx {
 				 const double& e) {
 
 
+    /*
     if ( (x0 < 0) || (y0 < 0) || (z0 < 0) || (x1 < 0) || (y1 < 0) || (z1 < 0) ) {
       std::cout << "ERROR! MODULE CANNOT FUNCTION WITH NEGATIVE COORDINATES" << std::endl;
       return;
+    }
+    */
+
+    _first = false;
+
+    if ( (_first == false) && (_dmaxsq > 0) ){
+      double dd = (x0-_xstart)*(x0-_xstart) + (y0-_ystart)*(y0-_ystart) + (z0-_zstart)*(z0-_zstart);
+      if (dd > _dmaxsq) return;
     }
 
     double efracadded = 0;
@@ -67,7 +94,8 @@ namespace vx {
 	std::cout << "All energy contained in voxel [ " << i0 << ", " << j0 << ", " << k0 << " ]"
 		  << "\t adding energy : " << e << std::endl;
       }
-      getVoxel(i0,j0,k0).AddEnergy(e);
+      auto& voxel = getVoxel(i0,j0,k0);
+      voxel.AddEnergy(e);
       _evox += e;
       return;
     }
@@ -165,7 +193,7 @@ namespace vx {
       UsedIDs[voxelID] = true;
       
       // get current voxel
-      auto thisVoxel = getVoxel(voxelID);
+      auto& thisVoxel = getVoxel(voxelID);
       
       // get AABox matching this voxel
       auto AAVoxel = getAAVoxel(thisVoxel);
@@ -191,9 +219,9 @@ namespace vx {
 	  thisVoxel.AddEnergy( e * efrac );
 	  efracadded += efrac;
 	  _evox += (e*efrac);
-	  _edep = e*efrac;
-	  _dx   = points[0].Dist(step.Start());
-	  _voxel_tree->Fill();
+	  //_edep = e*efrac;
+	  //_dx   = points[0].Dist(step.Start());
+	  //_voxel_tree->Fill();
 	  addStart = true;
 	}
 
@@ -205,9 +233,9 @@ namespace vx {
 	  thisVoxel.AddEnergy( e * efrac );
 	  efracadded += efrac;
 	  _evox += (e*efrac);
-	  _edep = e*efrac;
-	  _dx   = points[0].Dist(step.End());
-	  _voxel_tree->Fill();
+	  //_edep = e*efrac;
+	  //_dx   = points[0].Dist(step.End());
+	  //_voxel_tree->Fill();
 	  addEnd = true;
 	}
       }// if a single intersection point
@@ -223,9 +251,9 @@ namespace vx {
 	thisVoxel.AddEnergy( e * efrac );
 	efracadded += efrac;
 	_evox += (e*efrac);
-	_edep = e*efrac;
-	_dx   = points[0].Dist(points[1]);
-	_voxel_tree->Fill();
+	//_edep = e*efrac;
+	//_dx   = points[0].Dist(points[1]);
+	//_voxel_tree->Fill();
 
 	if (_verbose) {
 	  std::cout << "\t intersection length : " << points[0].Dist(points[1])
@@ -362,63 +390,245 @@ namespace vx {
 
     double etotal  = 0;
     double ethresh = 0;
+
+    // map of IDs below threshold already added
+    std::map< ID, bool > usedVoxels;
+
+    /*
     
     for (auto it = _voxelMap.begin(); it != _voxelMap.end(); it++) {
 
       auto const& voxel = it->second;
 
-      etotal += voxel.Energy();
+      double eadd = voxel.Energy();
 
-      //_edep  = voxel.Energy();
-      //_voxel_tree->Fill();
+      etotal += eadd;
 
-      if (voxel.Energy() > emin)
-	{
-	  ethresh += voxel.Energy();
-	  continue;
-	}
 
-      // if the voxel itself does not have enough energy, check the neighbors
       
-      // does a neighbor in x pass the condition?
-      bool neighbor = false;
+      if (eadd > emin) {
+	
+	// if the voxel is above threshold, add to the energy included that
+	// of neighboring voxels in X and Y which have not yet been used
+	// if they are below threshold
+	
+	// if the voxel itself does not have enough energy, check the neighbors
+	
+	// does a neighbor in x pass the condition?
+	bool neighbor = false;
+	
+	// sum voxel energy for neighbords in X and Y
+	double neighborEnergy = 0.;
+	
+	// check neighbords in x
+	
+	ID idlowX( it->first.geti()-1, it->first.getj(), it->first.getk() );
+	
+	if (_voxelMap.find(idlowX) != _voxelMap.end() ) { // if voxel exists
+	  
+	  auto neighbor = _voxelMap[idlowX];
+	  
+	  // if energy is below threshold and has not yet been added:
+	  if ( (usedVoxels.find( idlowX ) == usedVoxels.end() ) && (neighbor.Energy() < emin) ) {
+	    eadd += neighbor.Energy();
+	    usedVoxels[ idlowX ] = true;
+	  }
+	  
+	}// if voxel exits
+	
+	ID idhighX( it->first.geti()+1, it->first.getj(), it->first.getk() );
+	
+	if (_voxelMap.find(idhighX) != _voxelMap.end() ) { // if voxel exists
+	  
+	  auto neighbor = _voxelMap[idhighX];
+	  
+	  // if energy is below threshold and has not yet been added:
+	  if ( (usedVoxels.find( idhighX ) == usedVoxels.end() ) && (neighbor.Energy() < emin) ) {
+	    eadd += neighbor.Energy();
+	    usedVoxels[ idhighX ] = true;
+	  }	    
+	  
+	}// if voxel exits
+	
+	// check neighbords in y
+	
+	ID idlowY( it->first.geti()-1, it->first.getj(), it->first.getk() );
+	
+	if (_voxelMap.find(idlowY) != _voxelMap.end() ) { // if voxel exists
+	  
+	  auto neighbor = _voxelMap[idlowY];
+	  
+	  // if energy is below threshold and has not yet been added:
+	  if ( (usedVoxels.find( idlowY ) == usedVoxels.end() ) && (neighbor.Energy() < emin) ) {
+	    eadd += neighbor.Energy();
+	    usedVoxels[ idlowY ] = true;
+	  }
+	  
+	}// if voxel exits
+	
+	ID idhighY( it->first.geti()+1, it->first.getj(), it->first.getk() );
+	
+	if (_voxelMap.find(idhighY) != _voxelMap.end() ) { // if voxel exists
+	  
+	  auto neighbor = _voxelMap[idhighY];
+	  
+	  // if energy is below threshold and has not yet been added:
+	  if ( (usedVoxels.find( idhighY ) == usedVoxels.end() ) && (neighbor.Energy() < emin) ) {
+	    eadd += neighbor.Energy();
+	    usedVoxels[ idhighY ] = true;
+	  }	    
+	  
+	}// if voxel exits
+	
+	ethresh += eadd;
+	
+      }// if voxel above threshold
       
-      // check neighbords in x
-      
-      ID idlowX( it->first.geti()-1, it->first.getj(), it->first.getk() );
-      if (_voxelMap.find(idlowX) != _voxelMap.end() ) {
-	if (_voxelMap[idlowX].Energy() + voxel.Energy() > emin)
-	  neighbor = true;
-      }
-      
-      ID idhighX( it->first.geti()+1, it->first.getj(), it->first.getk() );
-      if (_voxelMap.find(idhighX) != _voxelMap.end() ) {
-	if (_voxelMap[idhighX].Energy() + voxel.Energy() > emin)
-	  neighbor = true;
-      }
-
-      // does a neighbor in y pass the condition?
-      ID idlowY( it->first.geti(), it->first.getj()-1, it->first.getk() );
-      if (_voxelMap.find(idlowY) != _voxelMap.end() ) {
-	if (_voxelMap[idlowY].Energy() + voxel.Energy() > emin)
-	  neighbor = true;
-      }
-      
-      ID idhighY( it->first.geti(), it->first.getj()+1, it->first.getk() );
-      if (_voxelMap.find(idhighY) != _voxelMap.end() ) {
-	if (_voxelMap[idhighY].Energy() + voxel.Energy() > emin)
-	  neighbor = true;
-      }
-      
-      if (neighbor == true) {
-	//std::cout << "neighbor above threshold!" << std::endl;
-	ethresh += voxel.Energy();
-      }
-
     }// for all voxels in event
-    
+
+    */
+
+    // loop trhough voxels again, if neighbors in Y and X have less energy -> include in same entry for TTree
+    usedVoxels.clear();
+
+    for (auto it = _voxelMap.begin(); it != _voxelMap.end(); it++) {
+
+      etotal += it->second.Energy();
+
+      // already added? skip
+      if (usedVoxels.find( it->first ) != usedVoxels.end() ) continue;
+      
+      auto const& voxel = it->second;
+      
+      double evox = voxel.Energy();
+
+      _edep = evox;
+
+      ID idhighX( it->first.geti()+1, it->first.getj(), it->first.getk() );
+      if (_voxelMap.find(idhighX) != _voxelMap.end() ) { // if voxel exists
+	auto neighbor = _voxelMap[idhighX];
+	if ( (usedVoxels.find( idhighX ) == usedVoxels.end() ) && (neighbor.Energy() < evox) ) {
+	  _edep += neighbor.Energy();
+	  usedVoxels[ idhighX ] = true;
+	}
+      }
+
+      ID idlowX( it->first.geti()-1, it->first.getj(), it->first.getk() );
+      if (_voxelMap.find(idlowX) != _voxelMap.end() ) { // if voxel exists
+	auto neighbor = _voxelMap[idlowX];
+	if ( (usedVoxels.find( idlowX ) == usedVoxels.end() ) && (neighbor.Energy() < evox) ) {
+	  _edep += neighbor.Energy();
+	  usedVoxels[ idlowX ] = true;
+	}
+      }
+
+      ID idhighY( it->first.geti()+1, it->first.getj(), it->first.getk() );
+      if (_voxelMap.find(idhighY) != _voxelMap.end() ) { // if voxel exists
+	auto neighbor = _voxelMap[idhighY];
+	if ( (usedVoxels.find( idhighY ) == usedVoxels.end() ) && (neighbor.Energy() < evox) ) {
+	  _edep += neighbor.Energy();
+	  usedVoxels[ idhighY ] = true;
+	}
+      }
+
+      ID idlowY( it->first.geti()-1, it->first.getj(), it->first.getk() );
+      if (_voxelMap.find(idlowY) != _voxelMap.end() ) { // if voxel exists
+	auto neighbor = _voxelMap[idlowY];
+	if ( (usedVoxels.find( idlowY ) == usedVoxels.end() ) && (neighbor.Energy() < evox) ) {
+	  _edep += neighbor.Energy();
+	  usedVoxels[ idlowY ] = true;
+	}
+      }
+
+      usedVoxels[ it->first ] = true;
+
+      if (_edep <= 0) continue;
+
+      if (_edep > emin)
+	ethresh += _edep;
+
+      //_dx = -1;
+      //_voxel_tree->Fill();
+      
+    }// for all voxels
     
     return ethresh/etotal;
+  }
+
+  double VoxelizeTracks::Cluster(const double& angle, const double& radius) {
+
+    double etot  = 0.;
+    double efrac = 0.;
+    
+    double cosine = cos(angle * 3.1415 / 180.);
+
+    for (auto it = _voxelMap.begin(); it != _voxelMap.end(); it++) {
+
+      auto const& voxel = it->second;
+
+      if (voxel.Energy() <= 0) continue;
+
+      etot += voxel.Energy();
+
+      auto x = voxel.x();
+      auto y = voxel.y();
+      auto z = voxel.z();
+      
+      double rdist = sqrt( (x-_xstart)*(x-_xstart) + (y-_ystart)*(y-_ystart) + (z-_zstart)*(z-_zstart) );
+
+      if (rdist > radius) continue;
+
+      double cosAngle = (z-_zstart) / rdist;
+
+      /*
+      std::cout << "x : y : z -> " << x-_xstart << " : " << y-_ystart << " : " << z-_zstart 
+		<< "\t radius : " << rdist
+		<< "\t cos : " << cosAngle << std::endl;
+      */
+      
+      if (cosAngle < cosine) continue;
+
+      //std::cout << "\tkept!" << std::endl;
+      
+      efrac += voxel.Energy();
+	
+    }// for all voxels
+
+    /*
+    std::cout << "Etot = " << etot 
+	      << " @ radius " << radius 
+	      << " Efrac = " << efrac 
+	      << std::endl;
+    */
+
+    return efrac/etot;
+  }
+
+  double VoxelizeTracks::dEdx(const double& dist) {
+
+    /// keep track of total energy in integration distance
+    double edep = 0;
+
+    for (auto it = _voxelMap.begin(); it != _voxelMap.end(); it++) {
+
+      auto const& voxel = it->second;
+
+      if (voxel.Energy() <= 0) continue;
+      
+      auto x = voxel.x();
+      auto y = voxel.y();
+      auto z = voxel.z();
+      
+      double rdist = sqrt( (x-_xstart)*(x-_xstart) + (y-_ystart)*(y-_ystart) + (z-_zstart)*(z-_zstart) );
+      
+      // too far out? ignore
+      if (rdist > dist) continue;
+
+      edep += voxel.Energy();
+
+    }
+
+    return 10*edep/dist;
   }
 
   void VoxelizeTracks::WriteTree() {
@@ -429,6 +639,25 @@ namespace vx {
     _voxel_tree->Write();
     file->Close();
     
+  }
+
+  void VoxelizeTracks::Clear() {
+
+    _voxelMap.clear();
+    _etot = 0.;
+    _evox = 0.;
+    _evt += 1;
+    _first = true;
+
+  }
+
+  
+  void VoxelizeTracks::SetStart(const double& x, const double& y, const double& z) {
+
+    _xstart = x;
+    _ystart = y;
+    _zstart = z;
+
   }
 
 }
