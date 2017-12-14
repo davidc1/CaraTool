@@ -6,28 +6,43 @@
 #include "DataFormat/hit.h"
 #include "DataFormat/track.h"
 #include "DataFormat/mctrack.h"
+#include "DataFormat/opflash.h"
 #include "TruncMean.h"
+
+#include "LArUtil/SpaceChargeMicroBooNE.h"
+#include "LArUtil/GeometryHelper.h"
 
 namespace larlite {
 
   bool CosmicMichel::initialize() {
 
+    _w2cm  = larutil::GeometryHelper::GetME()->WireToCm();
+    _t2cm  = larutil::GeometryHelper::GetME()->TimeToCm();
+
     if (_tree_rc) delete _tree_rc;
     _tree_rc = new TTree("rctree","rctree");
-    _tree_rc->Branch("_dqdx_v","std::vector<double>",&_dqdx_v);
-    _tree_rc->Branch("_dqdx_trunc_v","std::vector<double>",&_dqdx_trunc_v);
-    _tree_rc->Branch("_x_v","std::vector<double>",&_x_v);
-    _tree_rc->Branch("_y_v","std::vector<double>",&_y_v);
-    _tree_rc->Branch("_z_v","std::vector<double>",&_z_v);
-    _tree_rc->Branch("_rr_v","std::vector<double>",&_rr_v);
+    _tree_rc->Branch("_dqdx_v","std::vector<float>",&_dqdx_v);
+    _tree_rc->Branch("_dqdx_trunc_v","std::vector<float>",&_dqdx_trunc_v);
+    //_tree_rc->Branch("_x_v","std::vector<double>",&_x_v);
+    //_tree_rc->Branch("_y_v","std::vector<double>",&_y_v);
+    //_tree_rc->Branch("_z_v","std::vector<double>",&_z_v);
+    _tree_rc->Branch("_rr_v","std::vector<float>",&_rr_v);
     _tree_rc->Branch("_xe_rc",&_xe_rc,"xe_rc/D");
     _tree_rc->Branch("_ye_rc",&_ye_rc,"ye_rc/D");
     _tree_rc->Branch("_ze_rc",&_ze_rc,"ze_rc/D");
+    _tree_rc->Branch("_xs_rc",&_xs_rc,"xs_rc/D");
+    _tree_rc->Branch("_ys_rc",&_ys_rc,"ys_rc/D");
+    _tree_rc->Branch("_zs_rc",&_zs_rc,"zs_rc/D");
+    _tree_rc->Branch("_px",&_px,"px/D");
+    _tree_rc->Branch("_py",&_py,"py/D");
+    _tree_rc->Branch("_pz",&_pz,"pz/D");
     _tree_rc->Branch("_xe_mc",&_xe_mc,"xe_mc/D");
     _tree_rc->Branch("_ye_mc",&_ye_mc,"ye_mc/D");
     _tree_rc->Branch("_ze_mc",&_ze_mc,"ze_mc/D");
     _tree_rc->Branch("_dmin",&_dmin,"dmin/D");
+    _tree_rc->Branch("_tmin",&_tmin,"tmin/D");
     _tree_rc->Branch("_rr_max",&_rr_max,"rr_max/D");
+    _tree_rc->Branch("_qnear",&_qnear,"qnear/D");
     
     // mc tree
     if (_tree_mc) delete _tree_mc;
@@ -44,43 +59,96 @@ namespace larlite {
   
   bool CosmicMichel::analyze(storage_manager* storage) {
 
-    // start by grabbing the calorimetry
-    auto ev_calo = storage->get_data<event_calorimetry>("pandoraCosmiccalo");
-
-    // grab associated track
-    larlite::event_track* ev_trk;
-    auto calo_trk_ass = storage->find_one_ass(ev_calo->id(),ev_trk,ev_calo->name());
-
     // load mctracks
     auto ev_mct = storage->get_data<event_mctrack>("mcreco");
 
-    // grab the muon (assume single-particle in TPC stopping sample)
-    if (!ev_mct or (ev_mct->size() == 0)){
-      print(larlite::msg::kWARNING,__FUNCTION__,"no MCTracks");
+    // start by grabbing the calorimetry
+    auto ev_calo = storage->get_data<event_calorimetry>("pandoraCosmiccalo");
+    
+    // grab flash
+    auto ev_flash = storage->get_data<event_opflash>("simpleFlashCosmic");
+
+    // grab associated track
+    larlite::event_track* ev_trk = nullptr;
+    auto calo_trk_ass = storage->find_one_ass(ev_calo->id(),ev_trk,ev_calo->name());
+
+    // no associated tracks? somthing went wrong
+    if (!ev_trk or (ev_trk->size() == 0)){
+      print(larlite::msg::kWARNING,__FUNCTION__,"no tracks associated to calo...");
       return true;
     }
 
+    /*
+    // load hits
+    larlite::event_hit* ev_hit = nullptr;
+    auto trk_hit_ass = storage->find_one_ass(ev_trk->id(),ev_hit,ev_trk->name());
+
+    // no associated hits? somthing went wrong
+    if (!ev_hit or (ev_hit->size() == 0)){
+      print(larlite::msg::kWARNING,__FUNCTION__,"no hits associated to track...");
+      return true;
+    }
+
+    // split hits in cells 10x10 cm to easily locate them
+    ResetHitMap(ev_hit);
+
+    // done creating hit map
+    
+    for (size_t h=0; h < ev_hit->size(); h++) {
+
+      auto const& hit = ev_hit->at(h);
+
+      // only Y-plane
+      if (hit.WireID().Plane != 2) continue;
+      
+      auto wcm = hit.WireID().Wire * _w2cm;
+      auto tcm = hit.PeakTime() * _t2cm;
+
+      auto pos = std::make_pair((int)tcm/10,(int)wcm/10);
+
+      _hitmap[pos].push_back( h );
+      
+    }
+    */
+    
+
     std::vector< std::vector<double> > mu_end_pt_v;
 
-    for (size_t i=0; i < ev_mct->size(); i++) {
-      auto mct = ev_mct->at(i);
-      if ( (mct.PdgCode() == 13) or (mct.PdgCode() == -13) ) {
-	if (mct.size() == 0) continue;
-	auto enter = mct.at(0);
-	_energy_mc = enter.E();
-	auto end = mct.End();
-	if (end.E() > 106.) continue;
-	_xe_mc = end.X();
-	_ye_mc = end.Y();
-	_ze_mc = end.Z();
-	if ( (_xe_mc < 256.) and (_xe_mc > 0) and (_ye_mc < 116.) and
-	     (_ye_mc > -116.) and (_ze_mc < 1036.) and (_ze_mc > 0.) ) {
-	  std::vector<double> endpt{_xe_mc,_ye_mc,_ze_mc};
-	  mu_end_pt_v.push_back( endpt );
-	  _tree_mc->Fill();
-	}// if in FV
-      }// if muon
-    }
+    auto SCE = larutil::SpaceChargeMicroBooNE();
+
+    if (_truth) {
+
+      // grab the muon (assume single-particle in TPC stopping sample)
+      if (!ev_mct or (ev_mct->size() == 0)){
+	print(larlite::msg::kWARNING,__FUNCTION__,"no MCTracks");
+	return true;
+      }
+      
+      for (size_t i=0; i < ev_mct->size(); i++) {
+	auto mct = ev_mct->at(i);
+	if ( (mct.PdgCode() == 13) or (mct.PdgCode() == -13) ) {
+	  if (mct.size() == 0) continue;
+	  auto enter = mct.at(0);
+	  _energy_mc = enter.E();
+	  auto end = mct.End();
+	  if (end.E() > 106.) continue;
+	  _xe_mc = end.X();
+	  _ye_mc = end.Y();
+	  _ze_mc = end.Z();
+	  if ( (_xe_mc < 256.) and (_xe_mc > 0) and (_ye_mc < 116.) and
+	       (_ye_mc > -116.) and (_ze_mc < 1036.) and (_ze_mc > 0.) ) {
+	    std::vector<double> endpt{_xe_mc,_ye_mc,_ze_mc};
+	    auto endptSCE = SCE.GetPosOffsets(endpt[0],endpt[1],endpt[2]);
+	    endptSCE[0] += endpt[0];
+	    endptSCE[1] += endpt[1];
+	    endptSCE[2] += endpt[2];
+	    mu_end_pt_v.push_back( endptSCE );
+	    _tree_mc->Fill();
+	  }// if in FV
+	}// if muon
+      }
+
+    } // if use truth
 
     if (!ev_trk or (ev_trk->size() == 0)){
       print(larlite::msg::kWARNING,__FUNCTION__,"no tracks");
@@ -97,12 +165,36 @@ namespace larlite {
       // grab the associated track
       if (calo_trk_ass.at(i).size() != 1) continue;
 
-      auto trk = ev_trk->at( calo_trk_ass.at(i).at(0) );
+      auto trkidx = calo_trk_ass.at(i).at(0);
+      auto trk = ev_trk->at( trkidx );
+
+      // closest flash time:
+      _tmin = 10000.;
+      for (size_t f=0; f < ev_flash->size(); f++) {
+	auto const& flash = ev_flash->at(f);
+	//if (flash.TotalPE() < 20) continue;
+	double ttrk = fabs(trk.End().X() / 0.1114 - flash.Time());
+	if (ttrk < _tmin) _tmin = ttrk;
+	ttrk = fabs((trk.End().X()-256.) / 0.1114 - flash.Time());
+	if (ttrk < _tmin) _tmin = ttrk;
+      }
+
+
+      if (trk.Length() < 150.) continue;
 
       _xe_rc = trk.End().X();
       _ye_rc = trk.End().Y();
       _ze_rc = trk.End().Z();
+      _xs_rc = trk.Vertex().X();
+      _ys_rc = trk.Vertex().Y();
+      _zs_rc = trk.Vertex().Z();
+      double mag = sqrt( (_ze_rc-_zs_rc)*(_ze_rc-_zs_rc) + (_ye_rc-_ys_rc)*(_ye_rc-_ys_rc) + (_xe_rc-_xs_rc)*(_xe_rc-_xs_rc) );
+      _px = (_xe_rc - _xs_rc) / mag;
+      _py = (_ye_rc - _ys_rc) / mag;
+      _pz = (_ze_rc - _zs_rc) / mag;
 
+      _qnear = 0;//Qtot(5.,trk.End(),trk_hit_ass[trkidx],ev_hit);
+      
       // find the closest true muon end-point
       double ddmin = 100000.;
       int idxmin = 0;
@@ -114,16 +206,16 @@ namespace larlite {
 	if (dd < ddmin) { ddmin = dd; idxmin = k; _dmin = sqrt(dd); }
       }// for all MC tracks
 
-      if (ddmin == 100000.) continue;
-      
-      _xe_mc = mu_end_pt_v[idxmin][0];
-      _ye_mc = mu_end_pt_v[idxmin][1];
-      _ze_mc = mu_end_pt_v[idxmin][2];
+      if (ddmin < 100000.) {
+	_xe_mc = mu_end_pt_v[idxmin][0];
+	_ye_mc = mu_end_pt_v[idxmin][1];
+	_ze_mc = mu_end_pt_v[idxmin][2];
+      }
 
       auto dqdx_v  = calo.dQdx();
       auto xyz_v   = calo.XYZ();
       auto rr_v    = calo.ResidualRange();
-      
+
       _x_v.clear();
       _y_v.clear();
       _z_v.clear();
@@ -156,7 +248,7 @@ namespace larlite {
 
       _tmean.CalcTruncMean(_rr_v,_dqdx_v,_dqdx_trunc_v);
       _tree_rc->Fill();
-      
+
     }// for all calo objects
     
     return true;
@@ -171,6 +263,75 @@ namespace larlite {
     }
     
     return true;
+  }
+
+  void CosmicMichel::ResetHitMap(larlite::event_hit* ev_hit) {
+
+    _hitmap.clear();
+    
+    for (int i=-10; i < 35; i++){
+      for (int k=-1; k < (int)(1036./10.)+1; k++){
+	auto pos = std::make_pair(i,k);
+	_hitmap[pos] = std::vector<int>();
+      }
+    }
+    
+    for (size_t h=0; h < ev_hit->size(); h++) {
+
+      auto const& hit = ev_hit->at(h);
+
+      // only Y-plane
+      if (hit.WireID().Plane != 2) continue;
+      
+      auto wcm = hit.WireID().Wire * _w2cm;
+      auto tcm = hit.PeakTime() * _t2cm;
+
+      auto pos = std::make_pair((int)tcm/10,(int)wcm/10);
+
+      _hitmap[pos].push_back( h );
+      
+    }
+
+    return;
+  }
+
+  double CosmicMichel::Qtot(const double& rmax,
+			    const TVector3& end,
+			    const std::vector<unsigned int>& ass_hit_v,
+			    larlite::event_hit* ev_hit) {
+
+    double qtot = 0;
+
+    auto geoH = larutil::GeometryHelper::GetME();
+
+    auto const& pt = geoH->Point_3Dto2D(end,2);
+    
+    int endw = pt.w/10;
+    int endt = (pt.t + 800 * _t2cm)/10;
+    
+    // grab points nearby
+    for (int i = endw-1; i <= endw+1; i++) {
+      for (int j = endt-1; j <= endt+1; j++) {
+	auto endpos = std::make_pair(j,i);
+	auto const& hits = _hitmap[endpos];
+	for (auto const& hit_idx : hits) {
+	  // if hit index associated to track -> skip
+	  bool trackhit = false;
+	  for (auto const& idx : ass_hit_v){
+	    if (idx == hit_idx) { trackhit = true; break; }
+	  }
+	  if (trackhit == true) continue;
+	  auto const& hit = ev_hit->at(hit_idx);
+	  auto wcm = hit.WireID().Wire * _w2cm;
+	  auto tcm = hit.PeakTime() * _t2cm;
+	  double d = sqrt ( (wcm - pt.w) * (wcm-pt.w) + (tcm - pt.t - 800*_t2cm) * (tcm - pt.t - 800*_t2cm) );
+	  if (d < 5.) { qtot += hit.Integral(); }
+	}// for all hits in cell
+      }// for all time cells
+    }// for all wire cells
+
+    return qtot;
+    
   }
 
 }

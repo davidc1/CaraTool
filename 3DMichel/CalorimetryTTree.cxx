@@ -14,12 +14,12 @@ namespace larlite {
 
     if (_tree) delete _tree;
     _tree = new TTree(_name.c_str(),_name.c_str());
-    _tree->Branch("_dqdx_v","std::vector<double>",&_dqdx_v);
-    _tree->Branch("_dqdx_trunc_v","std::vector<double>",&_dqdx_trunc_v);
-    _tree->Branch("_x_v","std::vector<double>",&_x_v);
-    _tree->Branch("_y_v","std::vector<double>",&_y_v);
-    _tree->Branch("_z_v","std::vector<double>",&_z_v);
-    _tree->Branch("_rr_v","std::vector<double>",&_rr_v);
+    _tree->Branch("_dqdx_v","std::vector<float>",&_dqdx_v);
+    _tree->Branch("_dqdx_trunc_v","std::vector<float>",&_dqdx_trunc_v);
+    _tree->Branch("_x_v","std::vector<float>",&_x_v);
+    _tree->Branch("_y_v","std::vector<float>",&_y_v);
+    _tree->Branch("_z_v","std::vector<float>",&_z_v);
+    _tree->Branch("_rr_v","std::vector<float>",&_rr_v);
     _tree->Branch("_xe_rc",&_xe_rc,"xe_rc/D");
     _tree->Branch("_ye_rc",&_ye_rc,"ye_rc/D");
     _tree->Branch("_ze_rc",&_ze_rc,"ze_rc/D");

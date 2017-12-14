@@ -9,12 +9,9 @@
 #pragma link off all classes;
 #pragma link off all functions;
 
-#pragma link C++ class larlite::CalorimetryTTree+;
-#pragma link C++ class larlite::CosmicMichel+;
-#pragma link C++ class TruncMean+;
-#pragma link C++ class larlite::IsolatedEndPoint+;
+#pragma link C++ class larlite::AddClusters+;
+#pragma link C++ class larlite::AddClusters2Pi0+;
+#pragma link C++ class larlite::CheckVertex+;
 //ADD_NEW_CLASS ... do not change this line
 #endif
-
-
 
